@@ -1,6 +1,6 @@
 import React from 'react';
 
-const PartnerDetail = ({ partner, formatCurrency, formatNumber, getTierColor, onBack }) => {
+const PartnerDetail = ({ partner, formatCurrency, formatNumber, formatVolume, getTierColor, onBack }) => {
   // If partner is the full API response, use it directly
   const partnerInfo = partner?.partner_info || partner;
   const monthlyPerformance = partner?.monthly_performance || [];
@@ -25,6 +25,16 @@ const PartnerDetail = ({ partner, formatCurrency, formatNumber, getTierColor, on
         maximumFractionDigits: 2,
       }).format(num);
     }
+  };
+
+  // Formatter for YTD values - always no decimals
+  const formatDetailCurrencyNoDecimals = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(Number(amount));
   };
 
   const formatDetailNumber = (num) => {
@@ -86,17 +96,9 @@ const PartnerDetail = ({ partner, formatCurrency, formatNumber, getTierColor, on
       <div className="detail-metrics">
         <div className="metric-card">
           <div className="metric-label">YTD Total Earnings</div>
-          <div className="metric-value large">{formatDetailCurrency(partnerInfo.total_earnings || 0)}</div>
+          <div className="metric-value large">{formatDetailCurrencyNoDecimals(partnerInfo.total_earnings || 0)}</div>
           <div className="metric-secondary">
             Monthly avg: {formatDetailCurrency(partnerInfo.avg_monthly_earnings || 0)}
-          </div>
-        </div>
-
-        <div className="metric-card">
-          <div className="metric-label">Total Active Clients</div>
-          <div className="metric-value large">{formatDetailNumber(partnerInfo.total_active_clients || 0)}</div>
-          <div className="metric-secondary">
-            Monthly avg: {formatDetailNumber(Math.round(partnerInfo.avg_monthly_active_clients || 0))}
           </div>
         </div>
 
@@ -109,8 +111,16 @@ const PartnerDetail = ({ partner, formatCurrency, formatNumber, getTierColor, on
         </div>
 
         <div className="metric-card">
+          <div className="metric-label">Total Volume</div>
+          <div className="metric-value large">{formatVolume(partnerInfo.volume_usd || 0)}</div>
+          <div className="metric-secondary">
+            Monthly avg: {formatVolume(partnerInfo.avg_monthly_volume || 0)}
+          </div>
+        </div>
+
+        <div className="metric-card">
           <div className="metric-label">YTD Company Revenue</div>
-          <div className="metric-value large">{formatDetailCurrency(partnerInfo.company_revenue || 0)}</div>
+          <div className="metric-value large">{formatDetailCurrencyNoDecimals(partnerInfo.company_revenue || 0)}</div>
           <div className="metric-secondary">
             Monthly avg: {formatDetailCurrency(partnerInfo.avg_monthly_revenue || 0)}
           </div>
@@ -118,33 +128,31 @@ const PartnerDetail = ({ partner, formatCurrency, formatNumber, getTierColor, on
       </div>
 
       {/* Current Month Performance */}
-      {partner.current_month && (
-        <div className="current-month-section">
-          <h3 className="heading-md">Current Month Performance</h3>
-          <div className="current-month-metrics">
-            <div className="current-month-card">
-              <div className="metric-label">Month</div>
-              <div className="metric-value">{new Date(partner.current_month.month).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}</div>
-            </div>
-            <div className="current-month-card">
-              <div className="metric-label">Earnings</div>
-              <div className="metric-value">{formatDetailCurrency(partner.current_month.total_earnings || 0)}</div>
-            </div>
-            <div className="current-month-card">
-              <div className="metric-label">Active Clients</div>
-              <div className="metric-value">{formatDetailNumber(partner.current_month.active_clients || 0)}</div>
-            </div>
-            <div className="current-month-card">
-              <div className="metric-label">New Clients</div>
-              <div className="metric-value">{formatDetailNumber(partner.current_month.new_active_clients || 0)}</div>
-            </div>
-            <div className="current-month-card">
-              <div className="metric-label">Company Revenue</div>
-              <div className="metric-value">{formatDetailCurrency(partner.current_month.company_revenue || 0)}</div>
-            </div>
+      <div className="current-month-section">
+        <h3 className="heading-md">Current Month Performance</h3>
+        <div className="current-month-grid">
+          <div className="current-month-card">
+            <div className="current-month-label">Earnings</div>
+            <div className="current-month-value">{formatDetailCurrency(partner?.current_month?.total_earnings || 0)}</div>
+          </div>
+          <div className="current-month-card">
+            <div className="current-month-label">Active Clients</div>
+            <div className="current-month-value">{formatDetailNumber(partner?.current_month?.active_clients || 0)}</div>
+          </div>
+          <div className="current-month-card">
+            <div className="current-month-label">New Clients</div>
+            <div className="current-month-value">{formatDetailNumber(partner?.current_month?.new_active_clients || 0)}</div>
+          </div>
+          <div className="current-month-card">
+            <div className="current-month-label">Volume</div>
+            <div className="current-month-value">{formatVolume(partner?.current_month?.volume_usd || 0)}</div>
+          </div>
+          <div className="current-month-card">
+            <div className="current-month-label">Company Revenue</div>
+            <div className="current-month-value">{formatDetailCurrency(partner?.current_month?.company_revenue || 0)}</div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Partner Details Grid */}
       <div className="detail-grid">
@@ -209,6 +217,7 @@ const PartnerDetail = ({ partner, formatCurrency, formatNumber, getTierColor, on
                     <th>Total Earnings</th>
                     <th>Active Clients</th>
                     <th>New Clients</th>
+                    <th>Volume</th>
                     <th>Company Revenue</th>
                   </tr>
                 </thead>
@@ -234,6 +243,9 @@ const PartnerDetail = ({ partner, formatCurrency, formatNumber, getTierColor, on
                       </td>
                       <td className="numeric-cell">
                         {formatDetailNumber(month.new_active_clients || 0)}
+                      </td>
+                      <td className="currency-cell">
+                        {formatVolume(month.volume_usd || 0)}
                       </td>
                       <td className="currency-cell">
                         {formatDetailCurrency(month.company_revenue || 0)}

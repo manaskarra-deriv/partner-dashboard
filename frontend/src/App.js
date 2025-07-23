@@ -85,7 +85,9 @@ function App() {
 
   const fetchTierAnalytics = async () => {
     try {
-      const response = await axios.get('/api/tier-analytics');
+      // Add cache busting parameter to ensure fresh data
+      const cacheBuster = `?t=${Date.now()}`;
+      const response = await axios.get(`/api/tier-analytics${cacheBuster}`);
       setTierAnalytics(response.data);
     } catch (err) {
       console.error('Error fetching tier analytics:', err);
@@ -118,68 +120,69 @@ function App() {
     navigate(`/partner/${partner.partner_id}`);
   };
 
-  const formatCurrency = (amount, exact = false, smartAbbreviate = false) => {
-    const num = Number(amount);
-    
-    if (smartAbbreviate) {
-      // Smart abbreviation for overview cards - only abbreviate millions/billions
-      if (num >= 1000000000) {
-        return `$${(num / 1000000000).toFixed(1)}B`;
-      } else if (num >= 1000000) {
-        return `$${(num / 1000000).toFixed(1)}M`;
+  const formatCurrency = (amount, exact = false, smart = false) => {
+    if (smart && amount >= 1000000) {
+      // For smart abbreviation in overview cards
+      if (amount >= 1000000000) {
+        return `$${(amount / 1000000000).toFixed(1)}B`;
       } else {
-        // Keep exact for thousands and below
-        if (num % 1 === 0) {
-          return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-          }).format(num);
-        } else {
-          return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          }).format(num);
-        }
+        return `$${(amount / 1000000).toFixed(1)}M`;
       }
-    } else if (exact) {
-      // For exact formatting (overview cards)
-      if (num % 1 === 0) {
-        // Whole number - no decimals
+    }
+    
+    const number = Number(amount);
+    
+    if (exact) {
+      // For exact formatting (detail pages)
+      if (number % 1 === 0) {
         return new Intl.NumberFormat('en-US', {
           style: 'currency',
           currency: 'USD',
           minimumFractionDigits: 0,
           maximumFractionDigits: 0,
-        }).format(num);
+        }).format(number);
       } else {
-        // Has decimals - show exactly 2 decimal places
         return new Intl.NumberFormat('en-US', {
           style: 'currency',
           currency: 'USD',
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
-        }).format(num);
+        }).format(number);
       }
     } else {
-      // For abbreviated formatting (tables, other places)
-      const rounded = Math.round(num);
-      
-      if (rounded >= 1000000) {
-        return `$${(rounded / 1000000).toFixed(1)}M`;
-      } else if (rounded >= 1000) {
-        return `$${(rounded / 1000).toFixed(1)}K`;
-      } else {
-        return new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency: 'USD',
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        }).format(rounded);
-      }
+      // For standard formatting (most places)
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      }).format(number);
+    }
+  };
+
+  const formatVolume = (amount) => {
+    const number = Number(amount);
+    
+    if (number >= 1000000000000) {
+      // Trillion
+      return `$${(number / 1000000000000).toFixed(2)}T`;
+    } else if (number >= 1000000000) {
+      // Billion
+      return `$${(number / 1000000000).toFixed(2)}B`;
+    } else if (number >= 1000000) {
+      // Million
+      return `$${(number / 1000000).toFixed(2)}M`;
+    } else if (number >= 1000) {
+      // Thousand
+      return `$${(number / 1000).toFixed(1)}K`;
+    } else {
+      // Less than thousand
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      }).format(number);
     }
   };
 
@@ -223,9 +226,10 @@ function App() {
       'Platinum': 'platinum',
       'Gold': 'gold',
       'Silver': 'silver',
-      'Bronze': 'bronze'
+      'Bronze': 'bronze',
+      'Inactive': 'inactive'
     };
-    return colors[tier] || 'bronze';
+    return colors[tier] || 'inactive';
   };
 
   if (error) {
@@ -276,6 +280,7 @@ function App() {
               onPartnerSelect={handlePartnerSelect}
               formatCurrency={formatCurrency}
               formatNumber={formatNumber}
+              formatVolume={formatVolume}
               getTierColor={getTierColor}
               sortField={sortField}
               sortDirection={sortDirection}
@@ -292,6 +297,7 @@ function App() {
             <PartnerDetailPage
               formatCurrency={formatCurrency}
               formatNumber={formatNumber}
+              formatVolume={formatVolume}
               getTierColor={getTierColor}
             />
           } />

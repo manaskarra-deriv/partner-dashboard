@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
-const TierAnalytics = ({ analytics, formatCurrency, formatNumber, mainLoading = false }) => {
+const TierAnalytics = ({ analytics, formatCurrency, formatNumber, formatVolume, mainLoading = false }) => {
   const [activeChart, setActiveChart] = useState('total_earnings');
+  const [showTrends, setShowTrends] = useState(false);
 
   const getTierColor = (tier) => {
     const colors = {
       'Platinum': '#E5E7EB',
       'Gold': '#FCD34D', 
       'Silver': '#9CA3AF',
-      'Bronze': '#F97316'
+      'Bronze': '#F97316',
+      'Inactive': '#9CA3AF'
     };
     return colors[tier] || '#6B7280';
   };
@@ -17,14 +19,17 @@ const TierAnalytics = ({ analytics, formatCurrency, formatNumber, mainLoading = 
   const getChartTitle = (metric) => {
     const titles = {
       'total_earnings': 'Partner Earnings by Tier',
-      'company_revenue': 'Company Revenue by Tier', 
-      'active_clients': 'Active Clients by Tier'
+      'company_revenue': 'Company Revenue by Tier',
+      'partner_id': 'Active Partners by Tier', 
+      'active_clients': 'Active Clients by Tier',
+      'new_active_clients': 'New Clients by Tier'
     };
-    return titles[metric] || metric;
+    const baseTitle = titles[metric] || metric;
+    return showTrends ? `${baseTitle} - Trend Analysis` : baseTitle;
   };
 
   const formatChartValue = (value, metric) => {
-    if (metric === 'active_clients') {
+    if (metric === 'active_clients' || metric === 'new_active_clients' || metric === 'partner_id') {
       return formatNumber(value);
     }
     return formatCurrency(value);
@@ -32,39 +37,48 @@ const TierAnalytics = ({ analytics, formatCurrency, formatNumber, mainLoading = 
 
   const CustomTooltip = ({ active, payload, label, metric }) => {
     if (active && payload && payload.length) {
+      // Calculate total for the month (excluding Inactive since they're always 0)
+      const monthTotal = payload
+        .filter(entry => entry.dataKey !== 'inactive')
+        .reduce((sum, entry) => sum + entry.value, 0);
+
       return (
         <div className="custom-tooltip">
           <p className="tooltip-label">{`Month: ${label}`}</p>
-          {payload.map((entry, index) => {
-            const tierName = entry.dataKey.charAt(0).toUpperCase() + entry.dataKey.slice(1);
-            let formattedValue;
-            
-            if (metric === 'active_clients') {
-              formattedValue = formatNumber(entry.value, true); // exact formatting
-            } else {
-              // Format currency without decimals for cleaner display
-              const roundedValue = Math.round(entry.value);
-              formattedValue = new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: 'USD',
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0,
-              }).format(roundedValue);
-            }
-            
-            return (
-              <p key={index} style={{ color: entry.color }}>
-                {`${tierName}: ${formattedValue}`}
-              </p>
-            );
-          })}
+          {payload
+            .filter(entry => entry.dataKey !== 'inactive') // Exclude Inactive from hover
+            .map((entry, index) => {
+              const tierName = entry.dataKey.charAt(0).toUpperCase() + entry.dataKey.slice(1);
+              let formattedValue;
+              
+              if (metric === 'active_clients' || metric === 'new_active_clients' || metric === 'partner_id') {
+                formattedValue = formatNumber(entry.value, true);
+              } else {
+                const roundedValue = Math.round(entry.value);
+                formattedValue = new Intl.NumberFormat('en-US', {
+                  style: 'currency',
+                  currency: 'USD',
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                }).format(roundedValue);
+              }
+              
+              // Calculate percentage of total for this month
+              const percentage = monthTotal > 0 ? ((entry.value / monthTotal) * 100).toFixed(1) : '0.0';
+              
+              return (
+                <p key={index} style={{ color: entry.color }}>
+                  {`${tierName}: ${formattedValue} (${percentage}%)`}
+                </p>
+              );
+            })}
         </div>
       );
     }
     return null;
   };
 
-  const RechartsBarChart = ({ data, metric }) => {
+  const RechartsChart = ({ data, metric }) => {
     if (!data || data.length === 0) return (
       <div className="simple-chart">
         <div className="chart-header">
@@ -76,6 +90,37 @@ const TierAnalytics = ({ analytics, formatCurrency, formatNumber, mainLoading = 
       </div>
     );
 
+    const commonProps = {
+      data: data,
+      margin: { top: 20, right: 30, left: 20, bottom: 20 }
+    };
+
+    const commonElements = (
+      <>
+        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+        <XAxis 
+          dataKey="month" 
+          tick={{ fontSize: 12, fill: '#6b7280' }}
+          tickLine={{ stroke: '#d1d5db' }}
+        />
+        <YAxis 
+          tick={{ fontSize: 12, fill: '#6b7280' }}
+          tickLine={{ stroke: '#d1d5db' }}
+          tickFormatter={(value) => {
+            if (metric === 'active_clients' || metric === 'new_active_clients' || metric === 'partner_id') {
+              return value >= 1000 ? `${(value / 1000).toFixed(0)}K` : value;
+            }
+            return value >= 1000000 ? `$${(value / 1000000).toFixed(1)}M` : 
+                   value >= 1000 ? `$${(value / 1000).toFixed(0)}K` : `$${value}`;
+          }}
+        />
+        <Tooltip 
+          content={<CustomTooltip metric={metric} />}
+          cursor={showTrends ? { stroke: 'rgba(0, 0, 0, 0.1)' } : { fill: 'rgba(0, 0, 0, 0.1)' }}
+        />
+      </>
+    );
+
     return (
       <div className="simple-chart">
         <div className="chart-header">
@@ -83,37 +128,53 @@ const TierAnalytics = ({ analytics, formatCurrency, formatNumber, mainLoading = 
         </div>
         <div className="recharts-container">
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart
-              data={data}
-              margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-              barCategoryGap="20%"
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis 
-                dataKey="month" 
-                tick={{ fontSize: 12, fill: '#6b7280' }}
-                tickLine={{ stroke: '#d1d5db' }}
-              />
-              <YAxis 
-                tick={{ fontSize: 12, fill: '#6b7280' }}
-                tickLine={{ stroke: '#d1d5db' }}
-                tickFormatter={(value) => {
-                  if (metric === 'active_clients') {
-                    return value >= 1000 ? `${(value / 1000).toFixed(0)}K` : value;
-                  }
-                  return value >= 1000000 ? `$${(value / 1000000).toFixed(1)}M` : 
-                         value >= 1000 ? `$${(value / 1000).toFixed(0)}K` : `$${value}`;
-                }}
-              />
-              <Tooltip 
-                content={<CustomTooltip metric={metric} />}
-                cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
-              />
-              <Bar dataKey="platinum" fill="#E5E7EB" name="Platinum" />
-              <Bar dataKey="gold" fill="#FCD34D" name="Gold" />
-              <Bar dataKey="silver" fill="#9CA3AF" name="Silver" />
-              <Bar dataKey="bronze" fill="#F97316" name="Bronze" />
-            </BarChart>
+            {showTrends ? (
+              <LineChart {...commonProps} barCategoryGap="20%">
+                {commonElements}
+                <Line 
+                  type="monotone" 
+                  dataKey="platinum" 
+                  stroke="#6B7280" 
+                  strokeWidth={3}
+                  dot={{ fill: '#6B7280', strokeWidth: 2, r: 4 }}
+                  name="Platinum" 
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="gold" 
+                  stroke="#F59E0B" 
+                  strokeWidth={3}
+                  dot={{ fill: '#F59E0B', strokeWidth: 2, r: 4 }}
+                  name="Gold" 
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="silver" 
+                  stroke="#9CA3AF" 
+                  strokeWidth={3}
+                  dot={{ fill: '#9CA3AF', strokeWidth: 2, r: 4 }}
+                  name="Silver" 
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="bronze" 
+                  stroke="#EA580C" 
+                  strokeWidth={3}
+                  dot={{ fill: '#EA580C', strokeWidth: 2, r: 4 }}
+                  name="Bronze" 
+                />
+                {/* Don't include Inactive in trend lines since they're all 0 */}
+              </LineChart>
+            ) : (
+              <BarChart {...commonProps} barCategoryGap="20%">
+                {commonElements}
+                <Bar dataKey="platinum" fill="#E5E7EB" name="Platinum" />
+                <Bar dataKey="gold" fill="#FCD34D" name="Gold" />
+                <Bar dataKey="silver" fill="#9CA3AF" name="Silver" />
+                <Bar dataKey="bronze" fill="#F97316" name="Bronze" />
+                {/* Don't include Inactive in the chart since they're all 0 */}
+              </BarChart>
+            )}
           </ResponsiveContainer>
         </div>
       </div>
@@ -140,7 +201,7 @@ const TierAnalytics = ({ analytics, formatCurrency, formatNumber, mainLoading = 
           <div className="stacked-chart">
             <div className="stacked-chart-header">
               <span className="stacked-chart-label">Commission Distribution</span>
-              <span className="stacked-chart-total">{formatCurrency(analytics.totals.total_earnings)}</span>
+              <span className="stacked-chart-total">{formatVolume(analytics.totals.total_earnings)}</span>
             </div>
             <div className="stacked-bar">
               {analytics.tier_summary.map(tier => (
@@ -161,7 +222,7 @@ const TierAnalytics = ({ analytics, formatCurrency, formatNumber, mainLoading = 
           <div className="stacked-chart">
             <div className="stacked-chart-header">
               <span className="stacked-chart-label">Revenue Distribution</span>
-              <span className="stacked-chart-total">{formatCurrency(analytics.totals.total_revenue)}</span>
+              <span className="stacked-chart-total">{formatVolume(analytics.totals.total_revenue)}</span>
             </div>
             <div className="stacked-bar">
               {analytics.tier_summary.map(tier => (
@@ -224,11 +285,37 @@ const TierAnalytics = ({ analytics, formatCurrency, formatNumber, mainLoading = 
             >
               Active Clients
             </button>
+            <button 
+              className={`chart-tab ${activeChart === 'new_active_clients' ? 'active' : ''}`}
+              onClick={() => setActiveChart('new_active_clients')}
+            >
+              New Clients
+            </button>
+            <button 
+              className={`chart-tab ${activeChart === 'partner_id' ? 'active' : ''}`}
+              onClick={() => setActiveChart('partner_id')}
+            >
+              Active Partners
+            </button>
+          </div>
+          
+          {/* View Toggle */}
+          <div className="view-toggle">
+            <label className="toggle-switch">
+              <span className="toggle-label">Toggle Trends</span>
+              <input
+                type="checkbox"
+                checked={showTrends}
+                onChange={(e) => setShowTrends(e.target.checked)}
+              />
+              <span className="toggle-slider"></span>
+            </label>
           </div>
         </div>
         
+        {/* Single Chart that toggles between Bar and Line view */}
         <div className="chart-container">
-          <RechartsBarChart 
+          <RechartsChart 
             data={analytics.monthly_charts[activeChart]} 
             metric={activeChart}
           />

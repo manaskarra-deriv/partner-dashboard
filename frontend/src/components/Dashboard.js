@@ -16,6 +16,7 @@ const Dashboard = ({
   onPartnerSelect,
   formatCurrency,
   formatNumber,
+  formatVolume,
   getTierColor,
   sortField,
   sortDirection,
@@ -50,6 +51,7 @@ const Dashboard = ({
           analytics={tierAnalytics}
           formatCurrency={formatCurrency}
           formatNumber={formatNumber}
+          formatVolume={formatVolume}
           mainLoading={loading}
         />
       </section>
@@ -76,6 +78,7 @@ const Dashboard = ({
             onPartnerSelect={onPartnerSelect}
             formatCurrency={formatCurrency}
             formatNumber={formatNumber}
+            formatVolume={formatVolume}
             getTierColor={getTierColor}
             sortField={sortField}
             sortDirection={sortDirection}

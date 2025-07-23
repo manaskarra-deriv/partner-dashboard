@@ -5,7 +5,7 @@ import PartnerDetail from './PartnerDetail';
 import AICopilot from './AICopilot';
 import LoadingScreen from './LoadingScreen';
 
-const PartnerDetailPage = ({ formatCurrency, formatNumber, getTierColor }) => {
+const PartnerDetailPage = ({ formatCurrency, formatNumber, formatVolume, getTierColor }) => {
   const { partnerId } = useParams();
   const navigate = useNavigate();
   const [partner, setPartner] = useState(null);
@@ -69,6 +69,7 @@ const PartnerDetailPage = ({ formatCurrency, formatNumber, getTierColor }) => {
         partner={partner}
         formatCurrency={formatCurrency}
         formatNumber={formatNumber}
+        formatVolume={formatVolume}
         getTierColor={getTierColor}
         onBack={handleBackToDashboard}
       />

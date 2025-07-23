@@ -118,22 +118,6 @@ const PartnerFilters = ({ filters, activeFilters, onFilterChange }) => {
             <option value="false">Non-API Developers</option>
           </select>
         </div>
-
-        {/* Sort Options */}
-        <div className="filter-group">
-          <label className="filter-label">Sort By</label>
-          <select
-            className="filter-select"
-            value={localFilters.sort_by || 'total_earnings'}
-            onChange={(e) => handleFilterChange('sort_by', e.target.value)}
-          >
-            <option value="total_earnings">Total Earnings</option>
-            <option value="active_clients">Active Clients</option>
-            <option value="new_active_clients">New Clients</option>
-          </select>
-        </div>
-
-
       </div>
 
       {/* Active Filters Display */}
@@ -144,7 +128,7 @@ const PartnerFilters = ({ filters, activeFilters, onFilterChange }) => {
           </div>
           <div className="filter-tags">
             {Object.entries(localFilters).map(([key, value]) => {
-              if (!value) return null;
+              if (!value || key === 'sort_by' || key === 'sort_order') return null;
               
               let displayName = key.replace('_', ' ');
               let displayValue = value;
@@ -156,12 +140,6 @@ const PartnerFilters = ({ filters, activeFilters, onFilterChange }) => {
               } else if (key === 'is_app_dev') {
                 displayName = 'API Developer';
                 displayValue = value === 'true' ? 'Yes' : 'No';
-              } else if (key === 'sort_by') {
-                displayName = 'Sort';
-                displayValue = value.replace('_', ' ');
-              } else if (key === 'sort_order') {
-                displayName = 'Order';
-                displayValue = value === 'desc' ? 'Descending' : 'Ascending';
               }
               
               return (

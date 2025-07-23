@@ -7,6 +7,7 @@ const PartnerTable = ({
   onPartnerSelect,
   formatCurrency,
   formatNumber,
+  formatVolume,
   getTierColor,
   sortField,
   sortDirection,
@@ -100,6 +101,9 @@ const PartnerTable = ({
               <th onClick={() => onSortChange('new_active_clients')} className="sortable">
                 New Clients {getSortIcon('new_active_clients')}
               </th>
+              <th onClick={() => onSortChange('volume_usd')} className="sortable">
+                Total Volume {getSortIcon('volume_usd')}
+              </th>
               <th>API Dev</th>
               <th>Actions</th>
             </tr>
@@ -128,10 +132,10 @@ const PartnerTable = ({
                   </span>
                 </td>
                 <td className="currency-cell">
-                  <strong>{formatCurrency(partner.total_earnings || 0)}</strong>
+                  <strong>{formatVolume(partner.total_earnings || 0)}</strong>
                   {partner.avg_past_3_months_earnings && (
                     <small className="text-secondary">
-                      Avg: {formatCurrency(partner.avg_past_3_months_earnings)}
+                      Avg: {formatVolume(partner.avg_past_3_months_earnings)}
                     </small>
                   )}
                 </td>
@@ -141,11 +145,14 @@ const PartnerTable = ({
                 <td className="numeric-cell">
                   <span className="new-client-count">{formatNumber(partner.new_active_clients || 0)}</span>
                 </td>
+                <td className="numeric-cell">
+                  <span className="total-volume">{formatVolume(partner.volume_usd || 0)}</span>
+                </td>
                 <td className="status-cell">
                   {partner.is_app_dev ? (
-                    <span className="status-badge active">✅ Yes</span>
+                    <span className="status-badge active">✅</span>
                   ) : (
-                    <span className="status-badge inactive">❌ No</span>
+                    <span className="status-badge inactive">❌</span>
                   )}
                 </td>
                 <td className="actions-cell">

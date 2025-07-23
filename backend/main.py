@@ -94,7 +94,7 @@ def standardize_data():
         
         # Convert numeric columns
         numeric_columns = ['avg_past_3_months_earnings', 'total_earnings', 
-                          'company_revenue', 'active_clients', 'new_active_clients']
+                          'company_revenue', 'active_clients', 'new_active_clients', 'volume_usd']
         for col in numeric_columns:
             if col in partner_data.columns:
                 partner_data[col] = pd.to_numeric(partner_data[col], errors='coerce')
@@ -107,13 +107,26 @@ def standardize_data():
             'company_revenue': 0,
             'active_clients': 0,
             'new_active_clients': 0,
+            'volume_usd': 0,
             'is_app_dev': False
         }, inplace=True)
         
-        logger.info("Data standardization completed")
+        # UPDATED: Assign "Inactive" tier to partners with 0 total earnings
+        # Group by partner_id and check total earnings across all months
+        partner_total_earnings = partner_data.groupby('partner_id')['total_earnings'].sum().reset_index()
+        partner_total_earnings.columns = ['partner_id', 'cumulative_earnings']
+        
+        # Find partners with 0 cumulative earnings
+        inactive_partners = partner_total_earnings[partner_total_earnings['cumulative_earnings'] == 0]['partner_id'].tolist()
+        
+        # Update tier to "Inactive" for partners with 0 earnings
+        partner_data.loc[partner_data['partner_id'].isin(inactive_partners), 'partner_tier'] = 'Inactive'
+        
+        logger.info(f"Data standardization completed. {len(inactive_partners)} partners marked as Inactive (0 earnings)")
         
     except Exception as e:
         logger.error(f"Error standardizing data: {str(e)}")
+        raise e
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -141,36 +154,41 @@ def get_partner_overview():
             'is_app_dev': 'last'
         }).reset_index()
         
-        # Calculate top countries based on unique partners only (latest country per partner)
-        top_countries_series = unique_partners['country'].value_counts().head(5)
+        # UPDATED: Separate active and inactive partners
+        active_partners = unique_partners[unique_partners['partner_tier'] != 'Inactive']
+        inactive_partners = unique_partners[unique_partners['partner_tier'] == 'Inactive']
+        
+        # Calculate top countries based on ACTIVE partners only (exclude Inactive from country counts)
+        top_countries_series = active_partners['country'].value_counts().head(5)
         top_countries_dict = {}
         for country, count in top_countries_series.items():
             top_countries_dict[country] = int(count)
         
-        # Calculate tier distribution based on unique partners only (latest tier per partner)
+        # Calculate tier distribution including Inactive tier for visibility
         tier_counts = unique_partners['partner_tier'].value_counts()
-        tier_order = ['Platinum', 'Gold', 'Silver', 'Bronze']
+        tier_order = ['Platinum', 'Gold', 'Silver', 'Bronze', 'Inactive']
         tier_distribution_dict = {}
         for tier in tier_order:
             if tier in tier_counts:
                 tier_distribution_dict[tier] = int(tier_counts[tier])
         
-        # Calculate metrics using the aggregated unique partners data for consistency
-        total_revenue = float(unique_partners['total_earnings'].sum())
-        latest_active_clients = int(unique_partners['active_clients'].sum())
-        total_new_clients = int(unique_partners['new_active_clients'].sum())
-        api_developers = int(unique_partners['is_app_dev'].sum())
-        avg_earnings_per_partner = total_revenue / len(unique_partners) if len(unique_partners) > 0 else 0
+        # Calculate metrics using ACTIVE partners only (exclude Inactive from totals)
+        total_revenue = float(active_partners['total_earnings'].sum())
+        latest_active_clients = int(active_partners['active_clients'].sum())
+        total_new_clients = int(active_partners['new_active_clients'].sum())
+        api_developers = int(active_partners['is_app_dev'].sum())
+        avg_earnings_per_partner = total_revenue / len(active_partners) if len(active_partners) > 0 else 0
         
         # Calculate overview metrics - using OrderedDict to preserve order
+        # UPDATED: Include ALL partners in total count, but exclude Inactive from financial metrics
         overview = OrderedDict([
-            ('total_partners', len(unique_partners)),
-            ('total_revenue', total_revenue),
+            ('total_partners', len(unique_partners)),  # Include ALL partners (including Inactive)
+            ('total_revenue', total_revenue),           # From active partners only
             ('total_active_clients', int(latest_active_clients)),
             ('total_new_clients', total_new_clients),
-            ('avg_earnings_per_partner', float(avg_earnings_per_partner)),
-            ('top_countries', top_countries_dict),
-            ('tier_distribution', tier_distribution_dict),
+            ('avg_earnings_per_partner', float(avg_earnings_per_partner)),  # Based on active partners
+            ('top_countries', top_countries_dict),      # Active partners only
+            ('tier_distribution', tier_distribution_dict),  # Include Inactive for visibility
             ('api_developers', api_developers)
         ])
         
@@ -225,6 +243,7 @@ def get_partners():
             # Financial metrics - sum across all months (cumulative)
             'total_earnings': 'sum',
             'company_revenue': 'sum',
+            'volume_usd': 'sum',  # Sum volume across all months
             # Client metrics - use latest month values (not cumulative)
             'active_clients': 'last',
             'new_active_clients': 'sum',  # New clients can be summed (total acquired)
@@ -241,7 +260,7 @@ def get_partners():
         partner_aggregated['avg_past_3_months_earnings'] = partner_aggregated['avg_monthly_earnings']
         
         # Convert aggregated values to proper types
-        for col in ['total_earnings', 'company_revenue', 'active_clients', 'new_active_clients', 'avg_monthly_earnings', 'avg_past_3_months_earnings']:
+        for col in ['total_earnings', 'company_revenue', 'volume_usd', 'active_clients', 'new_active_clients', 'avg_monthly_earnings', 'avg_past_3_months_earnings']:
             if col in partner_aggregated.columns:
                 if col in ['active_clients', 'new_active_clients']:
                     partner_aggregated[col] = partner_aggregated[col].astype(int)
@@ -293,10 +312,12 @@ def get_partner_detail(partner_id):
         ytd_totals = {
             'total_earnings': float(partner_records['total_earnings'].sum()),
             'company_revenue': float(partner_records['company_revenue'].sum()),
+            'volume_usd': float(partner_records['volume_usd'].sum()),
             'total_active_clients': int(partner_records['active_clients'].iloc[-1]),  # Latest month's active clients
             'total_new_clients': int(partner_records['new_active_clients'].sum()),    # Sum of all new clients acquired
             'avg_monthly_earnings': float(partner_records['total_earnings'].mean()),
             'avg_monthly_revenue': float(partner_records['company_revenue'].mean()),
+            'avg_monthly_volume': float(partner_records['volume_usd'].mean()),
             'avg_monthly_active_clients': float(partner_records['active_clients'].mean()),
             'avg_monthly_new_clients': float(partner_records['new_active_clients'].mean()),
             'months_count': int(len(partner_records))
@@ -307,6 +328,7 @@ def get_partner_detail(partner_id):
             'month': latest_record['month'].isoformat() if pd.notna(latest_record['month']) else None,
             'total_earnings': float(latest_record['total_earnings']),
             'company_revenue': float(latest_record['company_revenue']),
+            'volume_usd': float(latest_record['volume_usd']),
             'active_clients': int(latest_record['active_clients']),
             'new_active_clients': int(latest_record['new_active_clients'])
         }
@@ -317,7 +339,8 @@ def get_partner_detail(partner_id):
             'total_earnings': 'first',
             'active_clients': 'first',
             'new_active_clients': 'first',
-            'company_revenue': 'first'
+            'company_revenue': 'first',
+            'volume_usd': 'first'
         }).reset_index().sort_values('month', ascending=False).to_dict('records')
         
         # Combine basic info with totals
@@ -344,8 +367,8 @@ def get_filter_options():
         if partner_data is None:
             return jsonify({'error': 'No data available'}), 400
         
-        # Define proper tier hierarchy order
-        tier_hierarchy = ['Platinum', 'Gold', 'Silver', 'Bronze']
+        # UPDATED: Define proper tier hierarchy order including Inactive
+        tier_hierarchy = ['Platinum', 'Gold', 'Silver', 'Bronze', 'Inactive']
         available_tiers = partner_data['partner_tier'].dropna().unique().tolist()
         # Keep only existing tiers in hierarchy order
         ordered_tiers = [tier for tier in tier_hierarchy if tier in available_tiers]
@@ -462,38 +485,57 @@ def get_tier_analytics():
             'new_active_clients': 'sum'
         }).reset_index()
         
-        # Calculate proportions
-        total_earnings = tier_totals['total_earnings'].sum()
-        total_revenue = tier_totals['company_revenue'].sum()
-        total_active_clients = tier_totals['active_clients'].sum()
-        total_partners = tier_totals['partner_id'].sum()
+        # UPDATED: Separate active and inactive tiers for calculations
+        active_tier_totals = tier_totals[tier_totals['partner_tier'] != 'Inactive']
+        
+        # Calculate proportions based on ACTIVE tiers only (exclude Inactive from percentage calculations)
+        total_earnings = active_tier_totals['total_earnings'].sum()
+        total_revenue = active_tier_totals['company_revenue'].sum()
+        total_active_clients = active_tier_totals['active_clients'].sum()
+        total_active_partners = active_tier_totals['partner_id'].sum()
         
         # Format tier totals with proportions
         tier_summary = []
-        tier_order = ['Platinum', 'Gold', 'Silver', 'Bronze']
+        tier_order = ['Platinum', 'Gold', 'Silver', 'Bronze', 'Inactive']
         
         for tier in tier_order:
             tier_data = tier_totals[tier_totals['partner_tier'] == tier]
             if not tier_data.empty:
                 row = tier_data.iloc[0]
-                tier_summary.append({
-                    'tier': tier,
-                    'partner_count': int(row['partner_id']),
-                    'total_earnings': float(row['total_earnings']),
-                    'total_revenue': float(row['company_revenue']),
-                    'active_clients': int(row['active_clients']),
-                    'new_clients': int(row['new_active_clients']),
-                    'earnings_percentage': float(row['total_earnings'] / total_earnings * 100) if total_earnings > 0 else 0,
-                    'revenue_percentage': float(row['company_revenue'] / total_revenue * 100) if total_revenue > 0 else 0,
-                    'clients_percentage': float(row['active_clients'] / total_active_clients * 100) if total_active_clients > 0 else 0,
-                    'partner_percentage': float(row['partner_id'] / total_partners * 100) if total_partners > 0 else 0
-                })
+                
+                # UPDATED: Handle Inactive tier separately (show 0% for all percentages)
+                if tier == 'Inactive':
+                    tier_summary.append({
+                        'tier': tier,
+                        'partner_count': int(row['partner_id']),
+                        'total_earnings': float(row['total_earnings']),
+                        'total_revenue': float(row['company_revenue']),
+                        'active_clients': int(row['active_clients']),
+                        'new_clients': int(row['new_active_clients']),
+                        'earnings_percentage': 0.0,  # Always 0% for Inactive
+                        'revenue_percentage': 0.0,   # Always 0% for Inactive
+                        'clients_percentage': 0.0,   # Always 0% for Inactive  
+                        'partner_percentage': 0.0    # Always 0% for Inactive
+                    })
+                else:
+                    tier_summary.append({
+                        'tier': tier,
+                        'partner_count': int(row['partner_id']),
+                        'total_earnings': float(row['total_earnings']),
+                        'total_revenue': float(row['company_revenue']),
+                        'active_clients': int(row['active_clients']),
+                        'new_clients': int(row['new_active_clients']),
+                        'earnings_percentage': float(row['total_earnings'] / total_earnings * 100) if total_earnings > 0 else 0,
+                        'revenue_percentage': float(row['company_revenue'] / total_revenue * 100) if total_revenue > 0 else 0,
+                        'clients_percentage': float(row['active_clients'] / total_active_clients * 100) if total_active_clients > 0 else 0,
+                        'partner_percentage': float(row['partner_id'] / total_active_partners * 100) if total_active_partners > 0 else 0
+                    })
         
-        # Format monthly data for charts
+        # Format monthly data for charts (include all tiers including Inactive)
         months = sorted(monthly_tier_data['month'].unique())
         monthly_charts = {}
         
-        for metric in ['total_earnings', 'company_revenue', 'active_clients']:
+        for metric in ['total_earnings', 'company_revenue', 'partner_id', 'active_clients', 'new_active_clients']:
             monthly_charts[metric] = []
             for month in months:
                 month_data = {'month': month}
@@ -508,14 +550,17 @@ def get_tier_analytics():
                         month_data[tier.lower()] = 0
                 monthly_charts[metric].append(month_data)
         
+        # UPDATED: Use total from all partners (including Inactive) for total count, but active totals for financial metrics
+        total_all_partners = tier_totals['partner_id'].sum()
+        
         analytics_data = {
             'tier_summary': tier_summary,
             'monthly_charts': monthly_charts,
             'totals': {
-                'total_partners': int(total_partners),
-                'total_earnings': float(total_earnings),
-                'total_revenue': float(total_revenue),
-                'total_active_clients': int(total_active_clients)
+                'total_partners': int(total_all_partners),      # Include all partners
+                'total_earnings': float(total_earnings),        # Active partners only
+                'total_revenue': float(total_revenue),          # Active partners only  
+                'total_active_clients': int(total_active_clients)  # Active partners only
             }
         }
         
@@ -637,7 +682,7 @@ def generate_dashboard_insights(data):
                 
                 # Format tier analytics for AI analysis
                 tier_summary = []
-                tier_order = ['Platinum', 'Gold', 'Silver', 'Bronze']
+                tier_order = ['Platinum', 'Gold', 'Silver', 'Bronze', 'Inactive']
                 
                 for tier in tier_order:
                     tier_data = tier_totals[tier_totals['partner_tier'] == tier]
@@ -1029,7 +1074,8 @@ def get_tier_rank(tier):
         'Platinum': 4,
         'Gold': 3,
         'Silver': 2,
-        'Bronze': 1
+        'Bronze': 1,
+        'Inactive': 0  # Inactive is the lowest tier
     }
     return tier_ranks.get(tier, 0) # Default to 0 if tier not found
 
