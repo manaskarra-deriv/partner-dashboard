@@ -932,9 +932,12 @@ def generate_partner_insights(data):
         - Current Month New Clients: {current_month_new_clients:,}
         - Client Growth Trend: {client_growth_trend}
         
-        SECONDARY - Financial Performance:
+        FINANCIAL PERFORMANCE CONTEXT:
         - Total Lifetime Earnings: ${total_earnings:,.2f}
         - Current Month Earnings: ${current_month.get('total_earnings', 0):,.2f}
+        - Average Monthly Earnings: ${partner_info.get('avg_monthly_earnings', 0):,.2f}
+        - Earnings per Active Client Ratio: ${(current_month.get('total_earnings', 0) / current_month_active_clients) if current_month_active_clients > 0 else 0:,.2f} per client
+        - Company Revenue (Current Month): ${current_month.get('company_revenue', 0):,.2f}
         
         {performance_analysis}
         {tier_progression_analysis}
@@ -956,24 +959,23 @@ def generate_partner_insights(data):
 
 Analyze this individual partner's data and provide strategic insights in exactly this JSON format:
 {
-    "summary": "Key client acquisition insight with numbers. Tier progression status with timeline. Critical client action needed.",
-    "key_findings": ["Client acquisition pattern with data", "Tier progression analysis", "Client growth opportunity or risk"],
-    "recommendations": ["Immediate client acquisition action with timeline", "Client retention improvement step", "Tier advancement strategy with client targets"],
-    "trends": ["Client acquisition monthly pattern with numbers", "Tier progression timeline with client correlation"]
+    "summary": "Key client acquisition insight with numbers. Tier progression status with timeline. Critical action needed (client or earnings focus).",
+    "key_findings": ["Client acquisition pattern with data", "Tier progression analysis", "Performance opportunity or risk (client/earnings)"],
+    "recommendations": ["Immediate action with timeline (client/earnings focus)", "Client retention or revenue improvement step", "Tier advancement strategy with specific targets"],
+    "trends": ["Client acquisition monthly pattern with numbers", "Tier progression timeline with performance correlation"]
 }
 
 Requirements:
-- Summary: Maximum 3 sentences, focus on CLIENT METRICS first, then tier progression
-- Key findings: Maximum 3 items, prioritize CLIENT ACQUISITION and retention insights
-- Recommendations: Maximum 3 items, focus on CLIENT GROWTH strategies and tier advancement through clients
-- Trends: Maximum 2 items, emphasize CLIENT PATTERNS and tier progression timeline
-- PRIMARY FOCUS: Active clients and new client acquisition (not earnings)
-- SECONDARY: Tier progression analysis from first month to last month chronologically
-- Earnings are mentioned only as supporting context, not the main focus
+- Summary: Maximum 3 sentences, focus on MOST CRITICAL METRICS (clients or earnings), then tier progression
+- Key findings: Maximum 3 items, prioritize the most actionable insights from client acquisition, retention, and earnings
+- Recommendations: Maximum 3 items, focus on strategies with highest impact (client growth, earnings optimization, or tier advancement)
+- Trends: Maximum 2 items, emphasize patterns that drive business outcomes
+- BALANCED APPROACH: Primarily focus on client metrics, but include 1-2 lines about earnings when insightful or actionable
+- Include earnings insights when: revenue trends correlate with client patterns, earnings per client ratios reveal opportunities, or revenue optimization could accelerate tier advancement
 - Analyze tier progression correctly from earliest to latest month
-- Identify client acquisition triggers for tier changes
-- Provide client-focused recommendations for tier advancement
-- Be concise but actionable with specific client targets"""
+- Identify key performance drivers for tier changes (client acquisition, retention, or revenue efficiency)
+- Provide actionable recommendations with specific targets for maximum business impact
+- Be concise but strategic with measurable goals"""
 
         user_prompt = f"Analyze this partner's performance data and provide strategic insights:\n\n{data_summary}"
         
