@@ -136,7 +136,6 @@ const TierAnalytics = ({ analytics, formatCurrency, formatNumber, mainLoading = 
 
       {/* Stacked Bar Charts */}
       <div className="stacked-charts-section">
-        <h3 className="heading-md" style={{ marginBottom: '0.5rem' }}>Tier Contribution Overview</h3>
         <div className="stacked-charts">
           <div className="stacked-chart">
             <div className="stacked-chart-header">
@@ -206,7 +205,6 @@ const TierAnalytics = ({ analytics, formatCurrency, formatNumber, mainLoading = 
       {/* Charts Section */}
       <div className="charts-section">
         <div className="chart-controls">
-          <h3 className="heading-md">Monthly Performance by Tier</h3>
           <div className="chart-tabs">
             <button 
               className={`chart-tab ${activeChart === 'total_earnings' ? 'active' : ''}`}
