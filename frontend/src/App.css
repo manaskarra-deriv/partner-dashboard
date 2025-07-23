@@ -192,8 +192,39 @@ body {
   min-height: calc(100vh - 4rem);
 }
 
-.section-header {
+.section-header,
+.analytics-header {
   margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.section-header h2,
+.analytics-header h2 {
+  margin: 0;
+}
+
+.section-header p,
+.analytics-header p {
+  margin: 0;
+  white-space: nowrap;
+}
+
+/* Responsive section header */
+@media (max-width: 768px) {
+  .section-header,
+  .analytics-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  
+  .section-header p,
+  .analytics-header p {
+    white-space: normal;
+  }
 }
 
 /* Consistent section spacing */
