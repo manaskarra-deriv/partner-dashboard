@@ -454,8 +454,11 @@ def get_tier_analytics():
         monthly_data_with_current_tier = partner_data.merge(partner_latest_tier, on='partner_id')
         
         # Get monthly data by current tier (not historical tier)
-        monthly_tier_data = monthly_data_with_current_tier.groupby(['month', 'current_tier']).agg({
-            'partner_id': 'nunique',  # Unique partners per tier per month
+        # UPDATED: Only count partners who earned commission that month (total_earnings > 0)
+        active_monthly_data = monthly_data_with_current_tier[monthly_data_with_current_tier['total_earnings'] > 0]
+        
+        monthly_tier_data = active_monthly_data.groupby(['month', 'current_tier']).agg({
+            'partner_id': 'nunique',  # Unique partners per tier per month who earned commission
             'total_earnings': 'sum',  # Total earnings per tier per month
             'company_revenue': 'sum',  # Total company revenue per tier per month
             'active_clients': 'sum',  # Total active clients per tier per month
