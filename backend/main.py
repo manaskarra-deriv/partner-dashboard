@@ -69,13 +69,14 @@ def load_csv_data():
             # Clean and standardize data
             standardize_data()
         else:
-            logger.error("No CSV files found")
-            # Create sample data for development
-            create_sample_data()
+            error_msg = "No CSV files found in ../data directory. Required files: Quarter 1.csv, Quarter 2.csv, Quarter 3.csv"
+            logger.error(error_msg)
+            raise FileNotFoundError(error_msg)
             
     except Exception as e:
-        logger.error(f"Error loading CSV data: {str(e)}")
-        create_sample_data()
+        error_msg = f"Error loading CSV data: {str(e)}"
+        logger.error(error_msg)
+        raise e
 
 def standardize_data():
     """Clean and standardize the loaded data"""
@@ -113,76 +114,6 @@ def standardize_data():
         
     except Exception as e:
         logger.error(f"Error standardizing data: {str(e)}")
-
-def create_sample_data():
-    """Create sample partner data for development"""
-    global partner_data
-    
-    try:
-        # Create consistent sample data with proper array lengths
-        num_partners = 100
-        num_months = 3  # Q1, Q2, Q3
-        
-        # Generate month dates for 2025
-        months = pd.date_range(start='2025-01-31', end='2025-03-31', freq='ME')
-        
-        # Create base partner data
-        partner_ids = [f'P{str(i).zfill(6)}' for i in range(1, num_partners + 1)]
-        countries = np.random.choice(['Malaysia', 'Singapore', 'Thailand', 'Indonesia', 'Philippines'], num_partners)
-        regions = np.random.choice(['APAC', 'Europe', 'Americas'], num_partners)
-        joined_dates = pd.date_range(start='2023-01-01', end='2024-12-31', periods=num_partners)
-        first_names = [f'FirstName{i}' for i in range(1, num_partners + 1)]
-        last_names = [f'LastName{i}' for i in range(1, num_partners + 1)]
-        usernames = [f'user{i}' for i in range(1, num_partners + 1)]
-        is_app_devs = np.random.choice([True, False], num_partners, p=[0.3, 0.7])
-        partner_tiers = np.random.choice(['Platinum', 'Gold', 'Silver', 'Bronze'], num_partners, p=[0.1, 0.2, 0.3, 0.4])
-        
-        # Create monthly data for each partner
-        sample_data = []
-        
-        for i, partner_id in enumerate(partner_ids):
-            for month in months:
-                # Generate monthly metrics
-                avg_earnings = np.random.normal(5000, 2000)
-                avg_earnings = max(0, avg_earnings)  # Ensure non-negative
-                
-                total_earnings = np.random.normal(15000, 8000)
-                total_earnings = max(0, total_earnings)
-                
-                tier_rewards = np.random.normal(1000, 500)
-                tier_rewards = max(0, tier_rewards)
-                
-                company_revenue = np.random.normal(50000, 20000)
-                company_revenue = max(0, company_revenue)
-                
-                active_clients = np.random.randint(1, 100)
-                new_active_clients = np.random.randint(0, 20)
-                
-                sample_data.append({
-                    'partner_id': partner_id,
-                    'country': countries[i],
-                    'region': regions[i],
-                    'joined_date': joined_dates[i],
-                    'first_name': first_names[i],
-                    'last_name': last_names[i],
-                    'username': usernames[i],
-                    'month': month,
-                    'is_app_dev': is_app_devs[i],
-                    'avg_past_3_months_earnings': avg_earnings,
-                    'partner_tier': partner_tiers[i],
-                    'tier_rewards': tier_rewards,
-                    'total_earnings': total_earnings,
-                    'company_revenue': company_revenue,
-                    'active_clients': active_clients,
-                    'new_active_clients': new_active_clients
-                })
-        
-        partner_data = pd.DataFrame(sample_data)
-        csv_files_loaded = True
-        logger.info(f"Sample data created for development with {len(partner_data)} records")
-        
-    except Exception as e:
-        logger.error(f"Error creating sample data: {str(e)}")
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
