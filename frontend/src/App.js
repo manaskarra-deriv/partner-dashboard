@@ -35,6 +35,33 @@ function App() {
     fetchTierAnalytics();
   }, []);
 
+  // Handle scroll restoration when returning from partner detail
+  useEffect(() => {
+    // Check if we're returning from partner detail with saved state
+    if (location.pathname === '/' && location.state?.scrollPosition !== undefined) {
+      const { scrollPosition, savedFilters, savedPage, savedSortField, savedSortDirection } = location.state;
+      
+      // Restore state if it was passed
+      if (savedFilters) setActiveFilters(savedFilters);
+      if (savedPage) setCurrentPage(savedPage);
+      if (savedSortField) setSortField(savedSortField);
+      if (savedSortDirection) setSortDirection(savedSortDirection);
+      
+      // Refetch data with restored state
+      if (savedFilters !== undefined && savedPage !== undefined) {
+        fetchPartners(savedFilters, savedPage);
+      }
+      
+      // Restore scroll position after the page renders and data loads
+      setTimeout(() => {
+        window.scrollTo(0, scrollPosition);
+      }, 150);
+      
+      // Clear the state from location to prevent re-triggering
+      window.history.replaceState({}, document.title, location.pathname);
+    }
+  }, [location]);
+
   // Refetch partners when sorting changes (reset to page 1)
   useEffect(() => {
     setCurrentPage(1);
@@ -95,6 +122,7 @@ function App() {
   };
 
   const handleFilterChange = (newFilters) => {
+    // Don't change scroll position when filters change - keep user where they are
     setActiveFilters(newFilters);
     setCurrentPage(1);
     fetchPartners(newFilters, 1);
@@ -116,8 +144,28 @@ function App() {
     setSortDirection(newDirection);
   };
 
+  const handleReset = () => {
+    // Reset all filters and sorting to default state
+    setActiveFilters({});
+    setSortField('total_earnings');
+    setSortDirection('desc');
+    setCurrentPage(1);
+    // Fetch partners with default settings
+    fetchPartners({}, 1);
+  };
+
   const handlePartnerSelect = (partner) => {
-    navigate(`/partner/${partner.partner_id}`);
+    // Capture current state before navigation
+    const currentScrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+    const currentState = {
+      scrollPosition: currentScrollPosition,
+      savedFilters: activeFilters,
+      savedPage: currentPage,
+      savedSortField: sortField,
+      savedSortDirection: sortDirection
+    };
+    
+    navigate(`/partner/${partner.partner_id}`, { state: currentState });
   };
 
   const formatCurrency = (amount, exact = false, smart = false) => {
@@ -278,6 +326,7 @@ function App() {
               loading={loading}
               onFilterChange={handleFilterChange}
               onPartnerSelect={handlePartnerSelect}
+              onReset={handleReset}
               formatCurrency={formatCurrency}
               formatNumber={formatNumber}
               formatVolume={formatVolume}

@@ -660,6 +660,53 @@ body {
   box-shadow: 0 0 0 3px var(--primary-red-light);
 }
 
+/* Range Filter Styles */
+.range-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filter-input-small {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  transition: border-color 0.2s ease;
+  min-width: 0;
+}
+
+.filter-input-small:focus {
+  outline: none;
+  border-color: var(--primary-red);
+  box-shadow: 0 0 0 3px var(--primary-red-light);
+  scroll-margin: 0; /* Prevent auto-scroll on focus */
+}
+
+.range-separator {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.mt-2 {
+  margin-top: 0.5rem;
+}
+
+/* Prevent automatic scrolling during form interactions */
+.filters-panel input:focus,
+.filters-panel select:focus {
+  scroll-margin: 0;
+}
+
+/* Prevent layout shifts during data updates */
+.partners-section {
+  contain: layout;
+}
+
 .active-filters {
   border-top: 1px solid var(--border-light);
   padding-top: 1rem;
@@ -702,6 +749,7 @@ body {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
+  min-height: 600px; /* Prevent layout shifts during data loading */
 }
 
 .table-header {
@@ -715,6 +763,27 @@ body {
   gap: 1rem;
 }
 
+.table-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.reset-btn {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.reset-btn:hover {
+  color: var(--primary-red);
+  border-color: var(--primary-red);
+  background: var(--primary-red-light);
+}
+
 .table-scroll {
   overflow-x: auto;
 }
@@ -725,17 +794,75 @@ body {
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: var(--shadow-xs);
+  table-layout: fixed;
 }
+
+/* Specific column widths */
+.data-table th:nth-child(1) { width: 7%; }   /* Partner ID */
+.data-table th:nth-child(2) { width: 16%; }  /* Name */
+.data-table th:nth-child(3) { width: 8%; }   /* Country */
+.data-table th:nth-child(4) { width: 7%; }   /* Region */
+.data-table th:nth-child(5) { width: 11%; }  /* Tier */
+.data-table th:nth-child(6) { width: 11%; }  /* Total Earnings */
+.data-table th:nth-child(7) { width: 7%; }   /* EtR Ratio */
+.data-table th:nth-child(8) { width: 9.5%; }  /* Active Clients (-1%) */
+.data-table th:nth-child(9) { width: 9.5%; }   /* New Clients (-1%) */
+.data-table th:nth-child(10) { width: 8%; }  /* Volume (+2%) */
+.data-table th:nth-child(11) { width: 6%; }  /* API Dev */
+.data-table th:nth-child(12) { width: 7%; }  /* Actions */
 
 .data-table th {
   background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
-  padding: 1rem;
+  padding: 0.75rem 0.5rem;
   text-align: center;
   font-weight: 600;
   color: var(--text-primary);
   border-bottom: 1px solid var(--border-color);
   font-size: 0.875rem;
   position: relative;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+/* EtR Ratio Color Coding */
+.ratio-cell {
+  text-align: center !important;
+}
+
+.etr-ratio {
+  display: inline-block;
+  padding: 0.25rem 0.4rem;
+  border-radius: 4px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  min-width: 60px;
+  text-align: center;
+}
+
+.etr-ratio.etr-excellent {
+  color: #059669;
+  border-color: #059669;
+  background-color: rgba(5, 150, 105, 0.1);
+}
+
+.etr-ratio.etr-good {
+  color: #d97706;
+  border-color: #d97706;
+  background-color: rgba(217, 119, 6, 0.1);
+}
+
+.etr-ratio.etr-fair {
+  color: #ca8a04;
+  border-color: #ca8a04;
+  background-color: rgba(202, 138, 4, 0.1);
+}
+
+.etr-ratio.etr-loss {
+  color: #dc2626;
+  border-color: #dc2626;
+  background-color: rgba(220, 38, 38, 0.1);
 }
 
 .data-table th.sortable {
@@ -838,6 +965,18 @@ body {
 .monthly-performance .data-table td {
   text-align: center;
 }
+
+/* Monthly Performance Table Column Widths */
+.monthly-performance .data-table th:nth-child(1) { width: 10%; }   /* Month */
+.monthly-performance .data-table th:nth-child(2) { width: 12%; }    /* Tier (reduced from default) */
+.monthly-performance .data-table th:nth-child(3) { width: 12%; }   /* Total Earnings (increased) */
+.monthly-performance .data-table th:nth-child(4) { width: 14%; }   /* Company Revenue (increased) */
+.monthly-performance .data-table th:nth-child(5) { width: 8%; }    /* EtR Ratio (reduced) */
+.monthly-performance .data-table th:nth-child(6) { width: 11%; }   /* Total Deposits */
+.monthly-performance .data-table th:nth-child(7) { width: 8%; }    /* EtD Ratio */
+.monthly-performance .data-table th:nth-child(8) { width: 10%; }   /* Active Clients */
+.monthly-performance .data-table th:nth-child(9) { width: 9%; }    /* New Clients */
+.monthly-performance .data-table th:nth-child(10) { width: 12%; }  /* Volume */
 
 .monthly-performance .currency-cell {
   text-align: center;
@@ -1177,9 +1316,28 @@ body {
 
 .current-month-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(6, 1fr);
   gap: 0.75rem;
   margin-top: 0.75rem;
+}
+
+/* Responsive for current month grid */
+@media (max-width: 1200px) {
+  .current-month-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .current-month-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .current-month-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .current-month-card {
@@ -2222,12 +2380,20 @@ body {
   margin-bottom: 3rem;
 }
 
+
+
 .chart-controls {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 1.5rem;
   flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.chart-selection {
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
 }
 
@@ -2520,4 +2686,386 @@ body {
       height: 250px;
     }
 
+}
+
+/* Partner Funnel Styles */
+.partner-funnel {
+  margin-top: 2rem;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-xl);
+  padding: 2rem;
+  box-shadow: var(--shadow-md);
+}
+
+.funnel-header {
+  margin-bottom: 1.5rem;
+}
+
+.funnel-description {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+.funnel-overview {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.overview-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.overview-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.overview-separator {
+  color: var(--text-tertiary);
+  font-weight: 600;
+}
+
+.overview-rate {
+  font-weight: 600;
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+}
+
+.funnel-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.summary-card {
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  text-align: center;
+  border: 1px solid var(--border-color);
+  transition: var(--transition-normal);
+}
+
+.summary-card:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-sm);
+}
+
+.summary-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.summary-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.summary-sub {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+/* Funnel Table Styles */
+.funnel-table-container {
+  margin-bottom: 2rem;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.funnel-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-primary);
+}
+
+.funnel-table th {
+  background: var(--bg-tertiary);
+  padding: 1rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.funnel-table th:first-child {
+  width: 120px;
+}
+
+.funnel-table th:nth-child(2),
+.funnel-table th:nth-child(3),
+.funnel-table th:nth-child(4),
+.funnel-table th:nth-child(5) {
+  width: 100px;
+  text-align: center;
+}
+
+.funnel-table th:last-child {
+  width: 200px;
+  text-align: center;
+}
+
+.funnel-table td {
+  padding: 1rem 0.75rem;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 0.875rem;
+  vertical-align: middle;
+}
+
+.funnel-table tbody tr:hover {
+  background: var(--bg-secondary);
+}
+
+.month-cell {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.funnel-cell {
+  text-align: center;
+}
+
+.funnel-value {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.funnel-percentage {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+}
+
+.funnel-viz-cell {
+  padding: 1rem 0.5rem;
+}
+
+.trapezoidal-funnel {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.25rem;
+}
+
+.trapezoidal-funnel svg {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+.trapezoidal-funnel path {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.trapezoidal-funnel path:hover {
+  filter: brightness(1.2) saturate(1.1);
+  stroke: rgba(255, 255, 255, 1);
+  stroke-width: 1.2;
+}
+
+
+
+
+
+.month-cell {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.month-label {
+  color: var(--primary-red);
+}
+
+.numeric-cell, .currency-cell {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.conversion-cell {
+  text-align: center;
+}
+
+.conversion-rate {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.75rem;
+  min-width: 50px;
+  text-align: center;
+}
+
+.conversion-excellent {
+  background: rgba(34, 197, 94, 0.1);
+  color: #059669;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.conversion-good {
+  background: rgba(251, 191, 36, 0.1);
+  color: #d97706;
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.conversion-fair {
+  background: rgba(249, 115, 22, 0.1);
+  color: #ea580c;
+  border: 1px solid rgba(249, 115, 22, 0.2);
+}
+
+.conversion-poor {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.funnel-insights {
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+}
+
+.insights-header h4 {
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.insights-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.insight-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.insight-icon {
+  font-size: 1rem;
+  margin-top: 0.125rem;
+}
+
+.insight-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.insight-text strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .funnel-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .overview-stats {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .overview-separator {
+    display: none;
+  }
+  
+  .funnel-table {
+    font-size: 0.75rem;
+  }
+  
+  .funnel-table th,
+  .funnel-table td {
+    padding: 0.75rem 0.5rem;
+  }
+  
+  .funnel-table th:first-child {
+    width: 80px;
+  }
+  
+  .funnel-table th:nth-child(2),
+  .funnel-table th:nth-child(3),
+  .funnel-table th:nth-child(4),
+  .funnel-table th:nth-child(5) {
+    width: 80px;
+  }
+  
+  .funnel-table th:last-child {
+    width: 150px;
+  }
+  
+  .trapezoidal-funnel svg {
+    width: 160px;
+    height: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .funnel-summary {
+    grid-template-columns: 1fr;
+  }
+  
+  .funnel-table {
+    font-size: 0.7rem;
+  }
+  
+  .funnel-table th,
+  .funnel-table td {
+    padding: 0.5rem 0.25rem;
+  }
+  
+  .funnel-table th:first-child {
+    width: 70px;
+  }
+  
+  .funnel-table th:nth-child(2),
+  .funnel-table th:nth-child(3),
+  .funnel-table th:nth-child(4),
+  .funnel-table th:nth-child(5) {
+    width: 60px;
+  }
+  
+  .funnel-table th:last-child {
+    width: 120px;
+  }
+  
+  .funnel-value {
+    font-size: 0.75rem;
+  }
+  
+  .funnel-percentage {
+    font-size: 0.65rem;
+  }
+  
+  .trapezoidal-funnel svg {
+    width: 140px;
+    height: 18px;
+  }
 } 

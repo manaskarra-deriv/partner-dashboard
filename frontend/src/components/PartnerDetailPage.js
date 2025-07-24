@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import PartnerDetail from './PartnerDetail';
 import AICopilot from './AICopilot';
@@ -8,6 +8,7 @@ import LoadingScreen from './LoadingScreen';
 const PartnerDetailPage = ({ formatCurrency, formatNumber, formatVolume, getTierColor }) => {
   const { partnerId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [partner, setPartner] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -32,7 +33,13 @@ const PartnerDetailPage = ({ formatCurrency, formatNumber, formatVolume, getTier
   }, [partnerId]);
 
   const handleBackToDashboard = () => {
+    // Use saved state from navigation if available
+    const savedState = location.state;
+    if (savedState) {
+      navigate('/', { state: savedState });
+    } else {
     navigate('/');
+    }
   };
 
   if (loading) {

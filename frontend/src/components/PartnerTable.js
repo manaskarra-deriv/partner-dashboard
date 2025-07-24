@@ -12,6 +12,8 @@ const PartnerTable = ({
   sortField,
   sortDirection,
   onSortChange,
+  onReset,
+  activeFilters,
   // Pagination props
   currentPage,
   totalPages,
@@ -27,6 +29,54 @@ const PartnerTable = ({
     return sortDirection === 'asc' ? 
       <span className="sort-icon sort-asc">▲</span> : 
       <span className="sort-icon sort-desc">▼</span>;
+  };
+
+  // Calculate EtR ratio percentage with proper negative logic
+  const calculateRatioPercentage = (earnings, revenue) => {
+    if (!revenue || revenue === 0) return '0.0%';
+    const ratio = (earnings / revenue) * 100;
+    const absRatio = Math.abs(ratio);
+    
+    let formattedRatio;
+    if (absRatio >= 1000000000) {
+      formattedRatio = `${(absRatio / 1000000000).toFixed(1)}B`;
+    } else if (absRatio >= 1000000) {
+      formattedRatio = `${(absRatio / 1000000).toFixed(1)}M`;
+    } else if (absRatio >= 1000) {
+      formattedRatio = `${(absRatio / 1000).toFixed(1)}K`;
+    } else {
+      formattedRatio = absRatio.toFixed(1);
+    }
+    
+    // Double negative: When revenue is negative (company lost money)
+    if (revenue < 0) {
+      return `--${formattedRatio}%`;
+    }
+    // Single negative: When earnings > positive revenue (unprofitable partner)
+    else if (earnings > revenue) {
+      return `-${formattedRatio}%`;
+    }
+    // Positive: When earnings <= revenue (profitable partner)
+    else {
+      return `${formattedRatio}%`;
+    }
+  };
+
+  // Get EtR ratio color class based on percentage value
+  const getEtrColorClass = (earnings, revenue) => {
+    if (!revenue || revenue === 0) return 'etr-fair';
+    const ratio = (earnings / revenue) * 100;
+    
+    // Red for any loss scenario (revenue negative OR earnings > positive revenue)
+    if (revenue < 0 || earnings > revenue) {
+      return 'etr-loss';
+    } else if (ratio >= 30 && ratio <= 40) {
+      return 'etr-excellent'; // Green for 30-40%
+    } else if (ratio > 40) {
+      return 'etr-good'; // Dark orange for 40%+
+    } else {
+      return 'etr-fair'; // Yellow for 0-30%
+    }
   };
 
   if (loading && !mainLoading) {
@@ -60,6 +110,18 @@ const PartnerTable = ({
       <div className="table-header">
         <h3 className="heading-md">Partners ({formatNumber(totalCount || partners.length)})</h3>
         
+        <div className="table-header-actions">
+          {/* Reset Button - show when filters are active or non-default sorting */}
+          {(Object.keys(activeFilters || {}).length > 0 || sortField !== 'total_earnings' || sortDirection !== 'desc') && (
+            <button 
+              className="btn-sm btn-ghost reset-btn"
+              onClick={onReset}
+              title="Reset filters and sorting"
+            >
+              ↻ Reset
+            </button>
+          )}
+        
         {/* Pagination Controls in Header */}
         {totalCount > 0 && (
           <Pagination
@@ -71,6 +133,7 @@ const PartnerTable = ({
             showingCount={partners.length}
           />
         )}
+        </div>
       </div>
       
       <div className="table-scroll">
@@ -95,6 +158,9 @@ const PartnerTable = ({
               <th onClick={() => onSortChange('total_earnings')} className="sortable">
                 Total Earnings {getSortIcon('total_earnings')}
               </th>
+              <th onClick={() => onSortChange('etr_ratio')} className="sortable">
+                EtR {getSortIcon('etr_ratio')}
+              </th>
               <th onClick={() => onSortChange('active_clients')} className="sortable">
                 Active Clients {getSortIcon('active_clients')}
               </th>
@@ -102,7 +168,7 @@ const PartnerTable = ({
                 New Clients {getSortIcon('new_active_clients')}
               </th>
               <th onClick={() => onSortChange('volume_usd')} className="sortable">
-                Total Volume {getSortIcon('volume_usd')}
+                Volume {getSortIcon('volume_usd')}
               </th>
               <th>API Dev</th>
               <th>Actions</th>
@@ -138,6 +204,17 @@ const PartnerTable = ({
                       Avg: {formatVolume(partner.avg_past_3_months_earnings)}
                     </small>
                   )}
+                </td>
+                <td className="ratio-cell">
+                  <span className={`etr-ratio ${getEtrColorClass(
+                    partner.total_earnings || 0, 
+                    partner.company_revenue || 0
+                  )}`}>
+                    {calculateRatioPercentage(
+                      partner.total_earnings || 0, 
+                      partner.company_revenue || 0
+                    )}
+                  </span>
                 </td>
                 <td className="numeric-cell">
                   <span className="client-count">{formatNumber(partner.active_clients || 0)}</span>

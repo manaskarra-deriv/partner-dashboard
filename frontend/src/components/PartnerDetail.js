@@ -1,4 +1,5 @@
 import React from 'react';
+import PartnerFunnel from './PartnerFunnel';
 
 const PartnerDetail = ({ partner, formatCurrency, formatNumber, formatVolume, getTierColor, onBack }) => {
   // If partner is the full API response, use it directly
@@ -35,6 +36,68 @@ const PartnerDetail = ({ partner, formatCurrency, formatNumber, formatVolume, ge
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(Number(amount));
+  };
+
+  // Calculate ratio percentage with proper negative logic
+  const calculateRatioPercentage = (earnings, revenue) => {
+    if (!revenue || revenue === 0) return '0.0%';
+    const ratio = (earnings / revenue) * 100;
+    const absRatio = Math.abs(ratio);
+    
+    let formattedRatio;
+    if (absRatio >= 1000000000) {
+      formattedRatio = `${(absRatio / 1000000000).toFixed(1)}B`;
+    } else if (absRatio >= 1000000) {
+      formattedRatio = `${(absRatio / 1000000).toFixed(1)}M`;
+    } else if (absRatio >= 1000) {
+      formattedRatio = `${(absRatio / 1000).toFixed(1)}K`;
+    } else {
+      formattedRatio = absRatio.toFixed(1);
+    }
+    
+    // Double negative: When revenue is negative (company lost money)
+    if (revenue < 0) {
+      return `--${formattedRatio}%`;
+    }
+    // Single negative: When earnings > positive revenue (unprofitable partner)
+    else if (earnings > revenue) {
+      return `-${formattedRatio}%`;
+    }
+    // Positive: When earnings <= revenue (profitable partner)
+    else {
+      return `${formattedRatio}%`;
+    }
+  };
+
+  // Calculate EtD (Earnings to Deposits) ratio percentage
+  const calculateEtDRatioPercentage = (earnings, deposits) => {
+    if (!deposits || deposits === 0) return '0.0%';
+    const ratio = (earnings / deposits) * 100;
+    const absRatio = Math.abs(ratio);
+    
+    let formattedRatio;
+    if (absRatio >= 1000000000) {
+      formattedRatio = `${(absRatio / 1000000000).toFixed(1)}B`;
+    } else if (absRatio >= 1000000) {
+      formattedRatio = `${(absRatio / 1000000).toFixed(1)}M`;
+    } else if (absRatio >= 1000) {
+      formattedRatio = `${(absRatio / 1000).toFixed(1)}K`;
+    } else {
+      formattedRatio = absRatio.toFixed(1);
+    }
+    
+    // Double negative: When deposits are negative (shouldn't happen normally)
+    if (deposits < 0) {
+      return `--${formattedRatio}%`;
+    }
+    // Negative: When earnings are negative (partner cost more than they brought)
+    else if (earnings < 0) {
+      return `-${formattedRatio}%`;
+    }
+    // Positive: Normal case
+    else {
+      return `${formattedRatio}%`;
+    }
   };
 
   const formatDetailNumber = (num) => {
@@ -103,6 +166,38 @@ const PartnerDetail = ({ partner, formatCurrency, formatNumber, formatVolume, ge
         </div>
 
         <div className="metric-card">
+          <div className="metric-label">YTD Company Revenue</div>
+          <div className="metric-value large">{formatDetailCurrencyNoDecimals(partnerInfo.company_revenue || 0)}</div>
+          <div className="metric-secondary">
+            Monthly avg: {formatDetailCurrency(partnerInfo.avg_monthly_revenue || 0)}
+          </div>
+        </div>
+
+        <div className="metric-card">
+          <div className="metric-label">EtR Ratio</div>
+          <div className="metric-value large">{calculateRatioPercentage(partnerInfo.total_earnings || 0, partnerInfo.company_revenue || 0)}</div>
+          <div className="metric-secondary">
+            Earnings to revenue ratio
+          </div>
+        </div>
+
+        <div className="metric-card">
+          <div className="metric-label">YTD Total Deposits</div>
+          <div className="metric-value large">{formatDetailCurrencyNoDecimals(partnerInfo.total_deposits || 0)}</div>
+          <div className="metric-secondary">
+            Monthly avg: {formatDetailCurrency(partnerInfo.avg_monthly_deposits || 0)}
+          </div>
+        </div>
+
+        <div className="metric-card">
+          <div className="metric-label">EtD Ratio</div>
+          <div className="metric-value large">{calculateEtDRatioPercentage(partnerInfo.total_earnings || 0, partnerInfo.total_deposits || 0)}</div>
+          <div className="metric-secondary">
+            Earnings to deposits ratio
+          </div>
+        </div>
+
+        <div className="metric-card">
           <div className="metric-label">Total New Clients</div>
           <div className="metric-value large">{formatDetailNumber(partnerInfo.total_new_clients || 0)}</div>
           <div className="metric-secondary">
@@ -117,14 +212,6 @@ const PartnerDetail = ({ partner, formatCurrency, formatNumber, formatVolume, ge
             Monthly avg: {formatVolume(partnerInfo.avg_monthly_volume || 0)}
           </div>
         </div>
-
-        <div className="metric-card">
-          <div className="metric-label">YTD Company Revenue</div>
-          <div className="metric-value large">{formatDetailCurrencyNoDecimals(partnerInfo.company_revenue || 0)}</div>
-          <div className="metric-secondary">
-            Monthly avg: {formatDetailCurrency(partnerInfo.avg_monthly_revenue || 0)}
-          </div>
-        </div>
       </div>
 
       {/* Current Month Performance */}
@@ -134,6 +221,22 @@ const PartnerDetail = ({ partner, formatCurrency, formatNumber, formatVolume, ge
           <div className="current-month-card">
             <div className="current-month-label">Earnings</div>
             <div className="current-month-value">{formatDetailCurrency(partner?.current_month?.total_earnings || 0)}</div>
+          </div>
+          <div className="current-month-card">
+            <div className="current-month-label">Company Revenue</div>
+            <div className="current-month-value">{formatDetailCurrency(partner?.current_month?.company_revenue || 0)}</div>
+          </div>
+          <div className="current-month-card">
+            <div className="current-month-label">EtR Ratio</div>
+            <div className="current-month-value">{calculateRatioPercentage(partner?.current_month?.total_earnings || 0, partner?.current_month?.company_revenue || 0)}</div>
+          </div>
+          <div className="current-month-card">
+            <div className="current-month-label">Deposits</div>
+            <div className="current-month-value">{formatDetailCurrency(partner?.current_month?.total_deposits || 0)}</div>
+          </div>
+          <div className="current-month-card">
+            <div className="current-month-label">EtD Ratio</div>
+            <div className="current-month-value">{calculateEtDRatioPercentage(partner?.current_month?.total_earnings || 0, partner?.current_month?.total_deposits || 0)}</div>
           </div>
           <div className="current-month-card">
             <div className="current-month-label">Active Clients</div>
@@ -146,10 +249,6 @@ const PartnerDetail = ({ partner, formatCurrency, formatNumber, formatVolume, ge
           <div className="current-month-card">
             <div className="current-month-label">Volume</div>
             <div className="current-month-value">{formatVolume(partner?.current_month?.volume_usd || 0)}</div>
-          </div>
-          <div className="current-month-card">
-            <div className="current-month-label">Company Revenue</div>
-            <div className="current-month-value">{formatDetailCurrency(partner?.current_month?.company_revenue || 0)}</div>
           </div>
         </div>
       </div>
@@ -215,10 +314,13 @@ const PartnerDetail = ({ partner, formatCurrency, formatNumber, formatVolume, ge
                     <th>Month</th>
                     <th>Tier</th>
                     <th>Total Earnings</th>
+                    <th>Company Revenue</th>
+                    <th>EtR Ratio</th>
+                    <th>Total Deposits</th>
+                    <th>EtD Ratio</th>
                     <th>Active Clients</th>
                     <th>New Clients</th>
                     <th>Volume</th>
-                    <th>Company Revenue</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -238,6 +340,18 @@ const PartnerDetail = ({ partner, formatCurrency, formatNumber, formatVolume, ge
                       <td className="currency-cell">
                         {formatDetailCurrency(month.total_earnings || 0)}
                       </td>
+                      <td className="currency-cell">
+                        {formatDetailCurrency(month.company_revenue || 0)}
+                      </td>
+                      <td className="ratio-cell">
+                        {calculateRatioPercentage(month.total_earnings || 0, month.company_revenue || 0)}
+                      </td>
+                      <td className="currency-cell">
+                        {formatDetailCurrency(month.total_deposits || 0)}
+                      </td>
+                      <td className="ratio-cell">
+                        {calculateEtDRatioPercentage(month.total_earnings || 0, month.total_deposits || 0)}
+                      </td>
                       <td className="numeric-cell">
                         {formatDetailNumber(month.active_clients || 0)}
                       </td>
@@ -247,9 +361,6 @@ const PartnerDetail = ({ partner, formatCurrency, formatNumber, formatVolume, ge
                       <td className="currency-cell">
                         {formatVolume(month.volume_usd || 0)}
                       </td>
-                      <td className="currency-cell">
-                        {formatDetailCurrency(month.company_revenue || 0)}
-                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -258,6 +369,13 @@ const PartnerDetail = ({ partner, formatCurrency, formatNumber, formatVolume, ge
           </div>
         </div>
       )}
+
+      {/* Partner Funnel Performance */}
+      <PartnerFunnel 
+        partnerId={partnerInfo?.partner_id}
+        formatNumber={formatDetailNumber}
+        formatCurrency={formatDetailCurrency}
+      />
     </div>
   );
 };

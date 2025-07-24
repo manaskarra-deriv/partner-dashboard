@@ -11,16 +11,22 @@ const PartnerOverview = ({ overview, formatCurrency, formatNumber }) => {
 
   const metrics = [
     {
-      title: 'Total Partners',
-      value: formatNumber(overview.total_partners, true),
+      title: 'Active Partners',
+      value: formatNumber(overview.active_partners, true),
       icon: '👥',
-      color: 'metric-blue'
+      color: 'metric-cyan'
     },
     {
       title: 'Total Revenue',
       value: formatCurrency(overview.total_revenue, false, true), // Use smart abbreviation
       icon: '💰',
       color: 'metric-green'
+    },
+    {
+      title: 'Total Deposits',
+      value: formatCurrency(overview.total_deposits, false, true), // Use smart abbreviation
+      icon: '💳',
+      color: 'metric-blue'
     },
     {
       title: 'Active Clients',

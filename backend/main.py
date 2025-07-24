@@ -22,6 +22,7 @@ import random
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
+from db_integration import db
 
 # Load environment variables
 load_dotenv()
@@ -94,7 +95,7 @@ def standardize_data():
         
         # Convert numeric columns
         numeric_columns = ['avg_past_3_months_earnings', 'total_earnings', 
-                          'company_revenue', 'active_clients', 'new_active_clients', 'volume_usd']
+                          'company_revenue', 'active_clients', 'new_active_clients', 'volume_usd', 'total_deposits']
         for col in numeric_columns:
             if col in partner_data.columns:
                 partner_data[col] = pd.to_numeric(partner_data[col], errors='coerce')
@@ -108,6 +109,7 @@ def standardize_data():
             'active_clients': 0,
             'new_active_clients': 0,
             'volume_usd': 0,
+            'total_deposits': 0,
             'is_app_dev': False
         }, inplace=True)
         
@@ -151,6 +153,7 @@ def get_partner_overview():
             'total_earnings': 'sum',
             'active_clients': 'last',
             'new_active_clients': 'sum',
+            'total_deposits': 'sum',
             'is_app_dev': 'last'
         }).reset_index()
         
@@ -174,16 +177,19 @@ def get_partner_overview():
         
         # Calculate metrics using ACTIVE partners only (exclude Inactive from totals)
         total_revenue = float(active_partners['total_earnings'].sum())
+        total_deposits = float(active_partners['total_deposits'].sum())
         latest_active_clients = int(active_partners['active_clients'].sum())
         total_new_clients = int(active_partners['new_active_clients'].sum())
         api_developers = int(active_partners['is_app_dev'].sum())
         avg_earnings_per_partner = total_revenue / len(active_partners) if len(active_partners) > 0 else 0
         
         # Calculate overview metrics - using OrderedDict to preserve order
-        # UPDATED: Include ALL partners in total count, but exclude Inactive from financial metrics
+        # UPDATED: Show active partners count, excluding Inactive partners
         overview = OrderedDict([
-            ('total_partners', len(unique_partners)),  # Include ALL partners (including Inactive)
+            ('active_partners', len(active_partners)),  # Active partners only (excluding Inactive)
+            ('total_partners', len(unique_partners)),   # Keep total for reference (including Inactive)
             ('total_revenue', total_revenue),           # From active partners only
+            ('total_deposits', total_deposits),         # From active partners only
             ('total_active_clients', int(latest_active_clients)),
             ('total_new_clients', total_new_clients),
             ('avg_earnings_per_partner', float(avg_earnings_per_partner)),  # Based on active partners
@@ -211,6 +217,16 @@ def get_partners():
         region = request.args.get('region')
         tier = request.args.get('tier')
         is_app_dev = request.args.get('is_app_dev')
+        
+        # Numerical filter parameters
+        active_clients_min = request.args.get('active_clients_min', type=int)
+        active_clients_max = request.args.get('active_clients_max', type=int)
+        new_clients_min = request.args.get('new_clients_min', type=int)
+        new_clients_max = request.args.get('new_clients_max', type=int)
+        etr_filter = request.args.get('etr_filter')
+        etr_min = request.args.get('etr_min', type=float)
+        etr_max = request.args.get('etr_max', type=float)
+        
         limit = request.args.get('limit', 50, type=int)
         offset = request.args.get('offset', 0, type=int)
         sort_by = request.args.get('sort_by', 'total_earnings')
@@ -220,8 +236,10 @@ def get_partners():
         filtered_data = partner_data.copy()
         
         if partner_id:
-            # Filter by partner ID (exact matching)
-            filtered_data = filtered_data[filtered_data['partner_id'].astype(str) == partner_id]
+            # Filter by partner ID(s) - support comma-separated values
+            partner_ids = [pid.strip() for pid in partner_id.split(',') if pid.strip()]
+            if partner_ids:
+                filtered_data = filtered_data[filtered_data['partner_id'].astype(str).isin(partner_ids)]
         if country:
             filtered_data = filtered_data[filtered_data['country'] == country]
         if region:
@@ -240,14 +258,17 @@ def get_partners():
             'partner_tier': 'last',  # Use latest tier to match detail page
             'is_app_dev': 'last',
             'joined_date': 'last',
-            # Financial metrics - sum across all months (cumulative)
+            # Financial metrics - sum across all months (cumulative) + recent month data for EtR
             'total_earnings': 'sum',
             'company_revenue': 'sum',
-            'volume_usd': 'sum',  # Sum volume across all months
-            # Client metrics - use latest month values (not cumulative)
+            'total_deposits': 'sum',  # Cumulative total deposits
+            # Recent month metrics for consistent display (like active_clients)
+            'volume_usd': 'last',  # Recent month volume (not cumulative)
             'active_clients': 'last',
-            'new_active_clients': 'sum',  # New clients can be summed (total acquired)
+            'new_active_clients': 'last',  # Recent month new clients (not cumulative)
         }).reset_index()
+        
+
         
         # Calculate months count for each partner
         months_count = filtered_data.groupby('partner_id').size().reset_index(name='months_count')
@@ -259,8 +280,22 @@ def get_partners():
         # Keep the original CSV field for reference but use consistent calculation for display
         partner_aggregated['avg_past_3_months_earnings'] = partner_aggregated['avg_monthly_earnings']
         
+        # Calculate Lifetime EtR ratio for sorting (before filtering)
+        def calculate_lifetime_etr_for_sorting(row):
+            earnings = row['total_earnings']  # Use lifetime total earnings
+            revenue = row['company_revenue']  # Use lifetime total company revenue
+            if revenue == 0:
+                return 0
+            ratio = (earnings / revenue) * 100
+            # For sorting purposes, treat loss scenarios as negative values
+            if revenue < 0 or earnings > revenue:
+                return -abs(ratio)  # Make it negative for proper sorting
+            return ratio
+        
+        partner_aggregated['etr_ratio'] = partner_aggregated.apply(calculate_lifetime_etr_for_sorting, axis=1)
+        
         # Convert aggregated values to proper types
-        for col in ['total_earnings', 'company_revenue', 'volume_usd', 'active_clients', 'new_active_clients', 'avg_monthly_earnings', 'avg_past_3_months_earnings']:
+        for col in ['total_earnings', 'company_revenue', 'total_deposits', 'volume_usd', 'active_clients', 'new_active_clients', 'avg_monthly_earnings', 'avg_past_3_months_earnings', 'etr_ratio']:
             if col in partner_aggregated.columns:
                 if col in ['active_clients', 'new_active_clients']:
                     partner_aggregated[col] = partner_aggregated[col].astype(int)
@@ -271,6 +306,44 @@ def get_partners():
         if tier:
             partner_aggregated = partner_aggregated[partner_aggregated['partner_tier'] == tier]
         
+        # Apply numerical filters AFTER aggregation
+        if active_clients_min is not None:
+            partner_aggregated = partner_aggregated[partner_aggregated['active_clients'] >= active_clients_min]
+        if active_clients_max is not None:
+            partner_aggregated = partner_aggregated[partner_aggregated['active_clients'] <= active_clients_max]
+        if new_clients_min is not None:
+            partner_aggregated = partner_aggregated[partner_aggregated['new_active_clients'] >= new_clients_min]
+        if new_clients_max is not None:
+            partner_aggregated = partner_aggregated[partner_aggregated['new_active_clients'] <= new_clients_max]
+        
+        # Apply EtR filter (using existing etr_ratio column based on lifetime data)
+        if etr_filter:
+            if etr_filter == 'revenue-loss':
+                # Filter for double negative: lifetime revenue is negative (company lost money)
+                partner_aggregated = partner_aggregated[partner_aggregated['company_revenue'] < 0]
+            elif etr_filter == 'unprofitable':
+                # Filter for single negative: lifetime earnings > positive lifetime revenue (unprofitable partner)
+                unprofitable_condition = (
+                    (partner_aggregated['company_revenue'] > 0) &
+                    (partner_aggregated['total_earnings'] > partner_aggregated['company_revenue'])
+                )
+                partner_aggregated = partner_aggregated[unprofitable_condition]
+            elif etr_filter == '0-30':
+                partner_aggregated = partner_aggregated[
+                    (partner_aggregated['etr_ratio'] >= 0) & (partner_aggregated['etr_ratio'] < 30)
+                ]
+            elif etr_filter == '30-40':
+                partner_aggregated = partner_aggregated[
+                    (partner_aggregated['etr_ratio'] >= 30) & (partner_aggregated['etr_ratio'] <= 40)
+                ]
+            elif etr_filter == '40+':
+                partner_aggregated = partner_aggregated[partner_aggregated['etr_ratio'] > 40]
+            elif etr_filter == 'custom':
+                if etr_min is not None:
+                    partner_aggregated = partner_aggregated[partner_aggregated['etr_ratio'] >= etr_min]
+                if etr_max is not None:
+                    partner_aggregated = partner_aggregated[partner_aggregated['etr_ratio'] <= etr_max]
+        
         # Sort aggregated data
         if sort_by in partner_aggregated.columns:
             ascending = sort_order.lower() == 'asc'
@@ -279,6 +352,10 @@ def get_partners():
         # Apply pagination
         total_count = len(partner_aggregated)
         paginated_data = partner_aggregated.iloc[offset:offset + limit]
+        
+        # Remove etr_ratio column before sending to frontend (frontend calculates it for display)
+        if 'etr_ratio' in paginated_data.columns:
+            paginated_data = paginated_data.drop('etr_ratio', axis=1)
         
         # Convert to JSON-serializable format
         result = {
@@ -312,11 +389,13 @@ def get_partner_detail(partner_id):
         ytd_totals = {
             'total_earnings': float(partner_records['total_earnings'].sum()),
             'company_revenue': float(partner_records['company_revenue'].sum()),
+            'total_deposits': float(partner_records['total_deposits'].sum()),
             'volume_usd': float(partner_records['volume_usd'].sum()),
             'total_active_clients': int(partner_records['active_clients'].iloc[-1]),  # Latest month's active clients
             'total_new_clients': int(partner_records['new_active_clients'].sum()),    # Sum of all new clients acquired
             'avg_monthly_earnings': float(partner_records['total_earnings'].mean()),
             'avg_monthly_revenue': float(partner_records['company_revenue'].mean()),
+            'avg_monthly_deposits': float(partner_records['total_deposits'].mean()),
             'avg_monthly_volume': float(partner_records['volume_usd'].mean()),
             'avg_monthly_active_clients': float(partner_records['active_clients'].mean()),
             'avg_monthly_new_clients': float(partner_records['new_active_clients'].mean()),
@@ -328,6 +407,7 @@ def get_partner_detail(partner_id):
             'month': latest_record['month'].isoformat() if pd.notna(latest_record['month']) else None,
             'total_earnings': float(latest_record['total_earnings']),
             'company_revenue': float(latest_record['company_revenue']),
+            'total_deposits': float(latest_record['total_deposits']),
             'volume_usd': float(latest_record['volume_usd']),
             'active_clients': int(latest_record['active_clients']),
             'new_active_clients': int(latest_record['new_active_clients'])
@@ -340,6 +420,7 @@ def get_partner_detail(partner_id):
             'active_clients': 'first',
             'new_active_clients': 'first',
             'company_revenue': 'first',
+            'total_deposits': 'first',
             'volume_usd': 'first'
         }).reset_index().sort_values('month', ascending=False).to_dict('records')
         
@@ -358,6 +439,62 @@ def get_partner_detail(partner_id):
         
     except Exception as e:
         logger.error(f"Error getting partner detail: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/partners/<partner_id>/funnel', methods=['GET'])
+def get_partner_funnel(partner_id):
+    """Get monthly funnel performance data for a specific partner"""
+    try:
+        # Get funnel data from Supabase
+        funnel_data = db.get_partner_funnel_data(partner_id)
+        
+        if not funnel_data:
+            return jsonify({
+                'funnel_data': [],
+                'summary': {
+                    'total_months': 0,
+                    'total_demo': 0,
+                    'total_real': 0,
+                    'total_deposits': 0,
+                    'total_trades': 0,
+                    'avg_deposit_rate': 0.0,
+                    'avg_trade_rate': 0.0
+                }
+            })
+        
+        # Calculate summary metrics based on new funnel structure
+        total_demo = sum(month['demo_count'] for month in funnel_data)
+        total_real = sum(month['real_count'] for month in funnel_data)
+        total_deposits = sum(month['deposit_count'] for month in funnel_data)
+        total_trades = sum(month['traded_count'] for month in funnel_data)
+        
+        avg_deposit_rate = (total_deposits / total_demo * 100) if total_demo > 0 else 0
+        avg_trade_rate = (total_trades / total_demo * 100) if total_demo > 0 else 0
+        
+        # Get acquisition summary
+        try:
+            acquisition_data = db.get_partner_acquisition_summary(partner_id)
+        except Exception as e:
+            logger.warning(f"Could not fetch acquisition data for partner {partner_id}: {str(e)}")
+            acquisition_data = {'acquisition_channels': [], 'total_channels': 0}
+        
+        return jsonify({
+            'funnel_data': funnel_data,
+            'summary': {
+                'total_months': len(funnel_data),
+                'total_demo': total_demo,
+                'total_real': total_real,
+                'total_deposits': total_deposits,
+                'total_trades': total_trades,
+                'avg_deposit_rate': round(avg_deposit_rate, 2),
+                'avg_trade_rate': round(avg_trade_rate, 2),
+                'recent_month': funnel_data[0] if funnel_data else None
+            },
+            'acquisition_data': acquisition_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting funnel data for partner {partner_id}: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/filters', methods=['GET'])
@@ -461,6 +598,7 @@ def get_tier_analytics():
             'partner_id': 'nunique',  # Unique partners per tier per month who earned commission
             'total_earnings': 'sum',  # Total earnings per tier per month
             'company_revenue': 'sum',  # Total company revenue per tier per month
+            'total_deposits': 'sum',  # Total deposits per tier per month
             'active_clients': 'sum',  # Total active clients per tier per month
             'new_active_clients': 'sum'  # Total new clients per tier per month
         }).reset_index()
@@ -476,6 +614,7 @@ def get_tier_analytics():
             'partner_tier': 'last',
             'total_earnings': 'sum',
             'company_revenue': 'sum',
+            'total_deposits': 'sum',
             'active_clients': 'last',
             'new_active_clients': 'sum'
         }).reset_index()
@@ -483,7 +622,8 @@ def get_tier_analytics():
         tier_totals = unique_partners.groupby('partner_tier').agg({
             'partner_id': 'count',
             'total_earnings': 'sum',
-            'company_revenue': 'sum', 
+            'company_revenue': 'sum',
+            'total_deposits': 'sum',
             'active_clients': 'sum',
             'new_active_clients': 'sum'
         }).reset_index()
@@ -494,6 +634,7 @@ def get_tier_analytics():
         # Calculate proportions based on ACTIVE tiers only (exclude Inactive from percentage calculations)
         total_earnings = active_tier_totals['total_earnings'].sum()
         total_revenue = active_tier_totals['company_revenue'].sum()
+        total_deposits = active_tier_totals['total_deposits'].sum()
         total_active_clients = active_tier_totals['active_clients'].sum()
         total_active_partners = active_tier_totals['partner_id'].sum()
         
@@ -513,10 +654,12 @@ def get_tier_analytics():
                         'partner_count': int(row['partner_id']),
                         'total_earnings': float(row['total_earnings']),
                         'total_revenue': float(row['company_revenue']),
+                        'total_deposits': float(row['total_deposits']),
                         'active_clients': int(row['active_clients']),
                         'new_clients': int(row['new_active_clients']),
                         'earnings_percentage': 0.0,  # Always 0% for Inactive
                         'revenue_percentage': 0.0,   # Always 0% for Inactive
+                        'deposits_percentage': 0.0,  # Always 0% for Inactive
                         'clients_percentage': 0.0,   # Always 0% for Inactive  
                         'partner_percentage': 0.0    # Always 0% for Inactive
                     })
@@ -526,10 +669,12 @@ def get_tier_analytics():
                         'partner_count': int(row['partner_id']),
                         'total_earnings': float(row['total_earnings']),
                         'total_revenue': float(row['company_revenue']),
+                        'total_deposits': float(row['total_deposits']),
                         'active_clients': int(row['active_clients']),
                         'new_clients': int(row['new_active_clients']),
                         'earnings_percentage': float(row['total_earnings'] / total_earnings * 100) if total_earnings > 0 else 0,
                         'revenue_percentage': float(row['company_revenue'] / total_revenue * 100) if total_revenue > 0 else 0,
+                        'deposits_percentage': float(row['total_deposits'] / total_deposits * 100) if total_deposits > 0 else 0,
                         'clients_percentage': float(row['active_clients'] / total_active_clients * 100) if total_active_clients > 0 else 0,
                         'partner_percentage': float(row['partner_id'] / total_active_partners * 100) if total_active_partners > 0 else 0
                     })
@@ -538,7 +683,7 @@ def get_tier_analytics():
         months = sorted(monthly_tier_data['month'].unique())
         monthly_charts = {}
         
-        for metric in ['total_earnings', 'company_revenue', 'partner_id', 'active_clients', 'new_active_clients']:
+        for metric in ['total_earnings', 'company_revenue', 'total_deposits', 'partner_id', 'active_clients', 'new_active_clients']:
             monthly_charts[metric] = []
             for month in months:
                 month_data = {'month': month}
@@ -562,7 +707,8 @@ def get_tier_analytics():
             'totals': {
                 'total_partners': int(total_all_partners),      # Include all partners
                 'total_earnings': float(total_earnings),        # Active partners only
-                'total_revenue': float(total_revenue),          # Active partners only  
+                'total_revenue': float(total_revenue),          # Active partners only
+                'total_deposits': float(total_deposits),        # Active partners only
                 'total_active_clients': int(total_active_clients)  # Active partners only
             }
         }
@@ -1101,4 +1247,4 @@ def get_tier_progression_status(start_tier, end_tier):
 load_csv_data()
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5002) 
+    app.run(debug=True, host='0.0.0.0', port=5003) 

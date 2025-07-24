@@ -42,12 +42,36 @@ const TierAnalytics = ({ analytics, formatCurrency, formatNumber, formatVolume, 
         .filter(entry => entry.dataKey !== 'inactive')
         .reduce((sum, entry) => sum + entry.value, 0);
 
+      // Format total for display
+      let formattedTotal;
+      if (metric === 'active_clients' || metric === 'new_active_clients' || metric === 'partner_id') {
+        formattedTotal = formatNumber(monthTotal, true);
+      } else {
+        const roundedTotal = Math.round(monthTotal);
+        formattedTotal = new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(roundedTotal);
+      }
+
+      // Define tier order from top to bottom (matching visual reading)
+      const tierOrder = ['platinum', 'gold', 'silver', 'bronze'];
+      
+      // Sort payload according to visual stacking order
+      const sortedPayload = payload
+        .filter(entry => entry.dataKey !== 'inactive')
+        .sort((a, b) => {
+          const aIndex = tierOrder.indexOf(a.dataKey);
+          const bIndex = tierOrder.indexOf(b.dataKey);
+          return aIndex - bIndex;
+        });
+
       return (
         <div className="custom-tooltip">
-          <p className="tooltip-label">{`Month: ${label}`}</p>
-          {payload
-            .filter(entry => entry.dataKey !== 'inactive') // Exclude Inactive from hover
-            .map((entry, index) => {
+          <p className="tooltip-label">{`Month: ${label} | Total: ${formattedTotal}`}</p>
+          {sortedPayload.map((entry, index) => {
               const tierName = entry.dataKey.charAt(0).toUpperCase() + entry.dataKey.slice(1);
               let formattedValue;
               
@@ -168,10 +192,10 @@ const TierAnalytics = ({ analytics, formatCurrency, formatNumber, formatVolume, 
             ) : (
               <BarChart {...commonProps} barCategoryGap="20%">
                 {commonElements}
-                <Bar dataKey="platinum" fill="#E5E7EB" name="Platinum" />
-                <Bar dataKey="gold" fill="#FCD34D" name="Gold" />
-                <Bar dataKey="silver" fill="#9CA3AF" name="Silver" />
-                <Bar dataKey="bronze" fill="#F97316" name="Bronze" />
+                <Bar dataKey="bronze" stackId="a" fill="#F97316" name="Bronze" />
+                <Bar dataKey="silver" stackId="a" fill="#9CA3AF" name="Silver" />
+                <Bar dataKey="gold" stackId="a" fill="#FCD34D" name="Gold" />
+                <Bar dataKey="platinum" stackId="a" fill="#E5E7EB" name="Platinum" />
                 {/* Don't include Inactive in the chart since they're all 0 */}
               </BarChart>
             )}
@@ -266,6 +290,8 @@ const TierAnalytics = ({ analytics, formatCurrency, formatNumber, formatVolume, 
       {/* Charts Section */}
       <div className="charts-section">
         <div className="chart-controls">
+          <div className="chart-selection">
+            <h3 className="heading-md">Monthly Performance Trends</h3>
           <div className="chart-tabs">
             <button 
               className={`chart-tab ${activeChart === 'total_earnings' ? 'active' : ''}`}
@@ -297,6 +323,7 @@ const TierAnalytics = ({ analytics, formatCurrency, formatNumber, formatVolume, 
             >
               Active Partners
             </button>
+            </div>
           </div>
           
           {/* View Toggle */}
@@ -313,7 +340,7 @@ const TierAnalytics = ({ analytics, formatCurrency, formatNumber, formatVolume, 
           </div>
         </div>
         
-        {/* Single Chart that toggles between Bar and Line view */}
+        {/* Single Selected Chart */}
         <div className="chart-container">
           <RechartsChart 
             data={analytics.monthly_charts[activeChart]} 
