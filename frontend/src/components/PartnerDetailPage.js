@@ -5,7 +5,7 @@ import PartnerDetail from './PartnerDetail';
 import AICopilot from './AICopilot';
 import LoadingScreen from './LoadingScreen';
 
-const PartnerDetailPage = ({ formatCurrency, formatNumber, formatVolume, getTierColor }) => {
+const PartnerDetailPage = ({ formatCurrency, formatNumber, formatVolume, getTierColor, onBack }) => {
   const { partnerId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -33,12 +33,16 @@ const PartnerDetailPage = ({ formatCurrency, formatNumber, formatVolume, getTier
   }, [partnerId]);
 
   const handleBackToDashboard = () => {
-    // Use saved state from navigation if available
-    const savedState = location.state;
-    if (savedState) {
-      navigate('/', { state: savedState });
+    if (onBack) {
+      onBack();
     } else {
-    navigate('/');
+      // Fallback if onBack prop is not provided
+      const savedState = location.state;
+      if (savedState) {
+        navigate('/', { state: savedState });
+      } else {
+        navigate('/');
+      }
     }
   };
 

@@ -27,6 +27,9 @@ function App() {
   const [hasMore, setHasMore] = useState(false);
   const partnersPerPage = 30;
 
+  // Check if we're on a partner detail page
+  const isPartnerDetailPage = location.pathname.startsWith('/partner/');
+
   // Fetch initial data
   useEffect(() => {
     fetchOverview();
@@ -52,15 +55,23 @@ function App() {
         fetchPartners(savedFilters, savedPage);
       }
       
-      // Restore scroll position after the page renders and data loads
-      setTimeout(() => {
-        window.scrollTo(0, scrollPosition);
-      }, 150);
+      // Store scroll position for restoration after loading
+      window._pendingScrollPosition = scrollPosition;
       
       // Clear the state from location to prevent re-triggering
       window.history.replaceState({}, document.title, location.pathname);
     }
   }, [location]);
+
+  // Restore scroll position when loading completes
+  useEffect(() => {
+    if (!loading && window._pendingScrollPosition !== undefined) {
+      setTimeout(() => {
+        window.scrollTo({ top: window._pendingScrollPosition, behavior: 'instant' });
+        delete window._pendingScrollPosition;
+      }, 100);
+    }
+  }, [loading]);
 
   // Refetch partners when sorting changes (reset to page 1)
   useEffect(() => {
@@ -166,6 +177,16 @@ function App() {
     };
     
     navigate(`/partner/${partner.partner_id}`, { state: currentState });
+  };
+
+  const handleBackToDashboard = () => {
+    // Use saved state from navigation if available
+    const savedState = location.state;
+    if (savedState) {
+      navigate('/', { state: savedState });
+    } else {
+      navigate('/');
+    }
   };
 
   const formatCurrency = (amount, exact = false, smart = false) => {
@@ -307,6 +328,15 @@ function App() {
       <header className="header">
         <div className="header-content">
           <div className="header-left">
+            {isPartnerDetailPage && (
+              <button 
+                className="back-button"
+                onClick={handleBackToDashboard}
+                title="Back to Dashboard"
+              >
+                ←
+              </button>
+            )}
             <img src="/Deriv.png" alt="Deriv" className="logo" />
             <h1 className="heading-lg">Partner Dashboard</h1>
           </div>
@@ -348,6 +378,7 @@ function App() {
               formatNumber={formatNumber}
               formatVolume={formatVolume}
               getTierColor={getTierColor}
+              onBack={handleBackToDashboard}
             />
           } />
         </Routes>

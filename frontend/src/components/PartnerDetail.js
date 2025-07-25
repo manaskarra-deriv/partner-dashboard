@@ -119,16 +119,6 @@ const PartnerDetail = ({ partner, formatCurrency, formatNumber, formatVolume, ge
 
   return (
     <div className="detail-container">
-      {/* Header with back button */}
-      <div className="detail-header-nav">
-        <button 
-          className="btn-secondary"
-          onClick={() => onBack ? onBack() : window.history.back()}
-        >
-          ← Back to Dashboard
-        </button>
-        <h2 className="heading-lg">Partner Details</h2>
-      </div>
       {/* Partner Info Header */}
       <div className="detail-header">
         <div className="partner-header-info">
