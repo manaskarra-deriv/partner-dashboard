@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 const AICopilot = ({ context, data }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -13,7 +14,7 @@ const AICopilot = ({ context, data }) => {
     setError(null);
     
     try {
-      const response = await axios.post('/api/ai-insights', {
+      const response = await axios.post(`${API_BASE_URL}/api/ai-insights`, {
         context: context, // 'dashboard' or 'partner_detail'
         data: data
       });

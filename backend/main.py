@@ -124,6 +124,22 @@ def standardize_data():
         # Update tier to "Inactive" for partners with 0 earnings
         partner_data.loc[partner_data['partner_id'].isin(inactive_partners), 'partner_tier'] = 'Inactive'
         
+        # Fetch GP regions mapping from Supabase and apply to partner data
+        try:
+            gp_regions_mapping = db.get_partner_regions_mapping()
+            if gp_regions_mapping:
+                # Create a new column for GP regions
+                partner_data['gp_region'] = partner_data['partner_id'].astype(str).map(gp_regions_mapping)
+                # Replace the original region with GP region where available, keep original as fallback
+                partner_data['region'] = partner_data['gp_region'].fillna(partner_data['region'])
+                # Drop the temporary gp_region column
+                partner_data.drop('gp_region', axis=1, inplace=True)
+                logger.info(f"Applied GP region mapping to {len([v for v in gp_regions_mapping.values() if v])} partners")
+            else:
+                logger.warning("No GP region mapping retrieved from database, keeping original CSV regions")
+        except Exception as e:
+            logger.error(f"Error applying GP region mapping: {str(e)}, keeping original CSV regions")
+        
         logger.info(f"Data standardization completed. {len(inactive_partners)} partners marked as Inactive (0 earnings)")
         
     except Exception as e:
@@ -133,11 +149,45 @@ def standardize_data():
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
-    return jsonify({
-        'status': 'healthy',
-        'csv_loaded': csv_files_loaded,
-        'partner_count': len(partner_data) if partner_data is not None else 0
-    })
+    try:
+        # Get database health status
+        db_health = db.health_check()
+        
+        return jsonify({
+            'status': 'healthy' if db_health['status'] == 'healthy' else 'degraded',
+            'csv_loaded': csv_files_loaded,
+            'partner_count': len(partner_data) if partner_data is not None else 0,
+            'database': db_health,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return jsonify({
+            'status': 'unhealthy',
+            'csv_loaded': csv_files_loaded,
+            'partner_count': len(partner_data) if partner_data is not None else 0,
+            'database': {'status': 'unhealthy', 'error': str(e)},
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
+@app.route('/api/db-health', methods=['GET'])
+def database_health_check():
+    """Dedicated database health check endpoint"""
+    try:
+        db_health = db.health_check()
+        return jsonify(db_health)
+    except Exception as e:
+        logger.error(f"Database health check failed: {str(e)}")
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e),
+            'response_time_ms': None,
+            'server_time': None,
+            'pool_status': {
+                'available_connections': 0,
+                'used_connections': 0
+            }
+        }), 500
 
 @app.route('/api/partner-overview', methods=['GET'])
 def get_partner_overview():
@@ -318,7 +368,7 @@ def get_partners():
         
         # Apply EtR filter (using existing etr_ratio column based on lifetime data)
         if etr_filter:
-            if etr_filter == 'revenue-loss':
+            if etr_filter == 'double-loss':
                 # Filter for double negative: lifetime revenue is negative (company lost money)
                 partner_aggregated = partner_aggregated[partner_aggregated['company_revenue'] < 0]
             elif etr_filter == 'unprofitable':
@@ -328,15 +378,23 @@ def get_partners():
                     (partner_aggregated['total_earnings'] > partner_aggregated['company_revenue'])
                 )
                 partner_aggregated = partner_aggregated[unprofitable_condition]
-            elif etr_filter == '0-30':
+            elif etr_filter == 'critically-low':
                 partner_aggregated = partner_aggregated[
-                    (partner_aggregated['etr_ratio'] >= 0) & (partner_aggregated['etr_ratio'] < 30)
+                    (partner_aggregated['etr_ratio'] >= 0.1) & (partner_aggregated['etr_ratio'] < 10)
                 ]
-            elif etr_filter == '30-40':
+            elif etr_filter == 'very-low':
+                partner_aggregated = partner_aggregated[
+                    (partner_aggregated['etr_ratio'] >= 10) & (partner_aggregated['etr_ratio'] < 20)
+                ]
+            elif etr_filter == 'low':
+                partner_aggregated = partner_aggregated[
+                    (partner_aggregated['etr_ratio'] >= 20) & (partner_aggregated['etr_ratio'] < 30)
+                ]
+            elif etr_filter == 'fair':
                 partner_aggregated = partner_aggregated[
                     (partner_aggregated['etr_ratio'] >= 30) & (partner_aggregated['etr_ratio'] <= 40)
                 ]
-            elif etr_filter == '40+':
+            elif etr_filter == 'high':
                 partner_aggregated = partner_aggregated[partner_aggregated['etr_ratio'] > 40]
             elif etr_filter == 'custom':
                 if etr_min is not None:
@@ -870,7 +928,7 @@ def generate_dashboard_insights(data):
         - API Developer Partners (Active as Partners): {api_dev_partners_count:,} out of {api_developers:,} total registered
         - API Developer Conversion Rate: {api_dev_conversion_rate:.1f}%
         
-        Geographic Distribution & Regional Performance:
+        Geographic Distribution & GP Regional Performance:
         - Top Countries: {overview.get('top_countries', {})}
         - Top 5 Countries Partner Count: {sum(overview.get('top_countries', {}).values())} ({sum(overview.get('top_countries', {}).values())/total_partners*100:.1f}% of total)
         - Geographic Concentration Risk: {'High' if sum(overview.get('top_countries', {}).values())/total_partners > 0.5 else 'Moderate' if sum(overview.get('top_countries', {}).values())/total_partners > 0.3 else 'Low'}
@@ -1246,5 +1304,25 @@ def get_tier_progression_status(start_tier, end_tier):
 # Initialize data on startup
 load_csv_data()
 
+# Graceful shutdown handler
+import atexit
+import signal
+
+def graceful_shutdown(signum=None, frame=None):
+    """Handle graceful shutdown of the application"""
+    logger.info("Shutting down application...")
+    try:
+        db.disconnect()
+        logger.info("Database connections closed successfully")
+    except Exception as e:
+        logger.error(f"Error during shutdown: {str(e)}")
+
+# Register shutdown handlers
+atexit.register(graceful_shutdown)
+signal.signal(signal.SIGTERM, graceful_shutdown)
+signal.signal(signal.SIGINT, graceful_shutdown)
+
 if __name__ == '__main__':
+    logger.info("Starting PDash backend server...")
+    logger.info("Database connection pool initialized successfully")
     app.run(debug=True, host='0.0.0.0', port=5003) 

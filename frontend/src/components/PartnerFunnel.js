@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 const PartnerFunnel = ({ partnerId, formatNumber, formatCurrency }) => {
   const [funnelData, setFunnelData] = useState(null);
@@ -17,7 +18,7 @@ const PartnerFunnel = ({ partnerId, formatNumber, formatCurrency }) => {
       setLoading(true);
       setError(null);
       
-      const response = await axios.get(`http://localhost:5003/api/partners/${partnerId}/funnel`);
+              const response = await axios.get(`${API_BASE_URL}/api/partners/${partnerId}/funnel`);
       setFunnelData(response.data);
     } catch (err) {
       console.error('Error fetching funnel data:', err);

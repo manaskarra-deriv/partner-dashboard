@@ -1,7 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const PartnerFilters = ({ filters, activeFilters, onFilterChange }) => {
   const [localFilters, setLocalFilters] = useState(activeFilters);
+
+  // Sync local filters with active filters when they change (e.g., on reset)
+  useEffect(() => {
+    setLocalFilters(activeFilters);
+  }, [activeFilters]);
 
   const handleFilterChange = (key, value) => {
     const newFilters = {
@@ -71,15 +76,15 @@ const PartnerFilters = ({ filters, activeFilters, onFilterChange }) => {
           </select>
         </div>
 
-        {/* Region Filter */}
+        {/* GP Region Filter */}
         <div className="filter-group">
-          <label className="filter-label">Region</label>
+          <label className="filter-label">GP Region</label>
           <select
             className="filter-select"
             value={localFilters.region || ''}
             onChange={(e) => handleFilterChange('region', e.target.value)}
           >
-            <option value="">All Regions</option>
+            <option value="">All GP Regions</option>
             {filters.regions?.map(region => (
               <option key={region} value={region}>
                 {region}
@@ -175,11 +180,13 @@ const PartnerFilters = ({ filters, activeFilters, onFilterChange }) => {
             onChange={(e) => handleFilterChange('etr_filter', e.target.value)}
           >
             <option value="">All Ratios</option>
-            <option value="revenue-loss">Revenue Loss (--)</option>
+            <option value="double-loss">Double Loss (--)</option>
             <option value="unprofitable">Unprofitable (-)</option>
-            <option value="0-30">Fair (0-30%)</option>
-            <option value="30-40">Excellent (30-40%)</option>
-            <option value="40+">High (40%+)</option>
+            <option value="critically-low">Critically Low (0.1-10%)</option>
+            <option value="very-low">Very Low (10-20%)</option>
+            <option value="low">Low (20-30%)</option>
+            <option value="fair">Fair (30-40%)</option>
+            <option value="high">High (40%+)</option>
             <option value="custom">Custom Range</option>
           </select>
           {localFilters.etr_filter === 'custom' && (
@@ -239,11 +246,13 @@ const PartnerFilters = ({ filters, activeFilters, onFilterChange }) => {
               } else if (key === 'etr_filter') {
                 displayName = 'EtR Ratio';
                 const etrLabels = {
-                  'revenue-loss': 'Revenue Loss (--)',
+                  'double-loss': 'Double Loss (--)',
                   'unprofitable': 'Unprofitable (-)',
-                  '0-30': 'Fair (0-30%)',
-                  '30-40': 'Excellent (30-40%)',
-                  '40+': 'High (40%+)',
+                  'critically-low': 'Critically Low (0.1-10%)',
+                  'very-low': 'Very Low (10-20%)',
+                  'low': 'Low (20-30%)',
+                  'fair': 'Fair (30-40%)',
+                  'high': 'High (40%+)',
                   'custom': 'Custom Range'
                 };
                 displayValue = etrLabels[value] || value;

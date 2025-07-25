@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 const TierAnalytics = ({ analytics, formatCurrency, formatNumber, formatVolume, mainLoading = false }) => {
-  const [activeChart, setActiveChart] = useState('total_earnings');
+  const [activeChart, setActiveChart] = useState('company_revenue');
   const [showTrends, setShowTrends] = useState(false);
 
   const getTierColor = (tier) => {
@@ -217,9 +217,69 @@ const TierAnalytics = ({ analytics, formatCurrency, formatNumber, formatVolume, 
         <p className="text-secondary">Commission breakdown and performance metrics by partner tier</p>
       </div>
 
+      {/* Charts Section - Moved to top */}
+      <div className="charts-section">
+        <div className="chart-controls">
+          <div className="chart-selection">
+            <h3 className="heading-md">Monthly Performance Trends</h3>
+          <div className="chart-tabs">
+            <button 
+              className={`chart-tab ${activeChart === 'company_revenue' ? 'active' : ''}`}
+              onClick={() => setActiveChart('company_revenue')}
+            >
+              Company Revenue
+            </button>
+            <button 
+              className={`chart-tab ${activeChart === 'total_earnings' ? 'active' : ''}`}
+              onClick={() => setActiveChart('total_earnings')}
+            >
+              Partner Earnings
+            </button>
+            <button 
+              className={`chart-tab ${activeChart === 'active_clients' ? 'active' : ''}`}
+              onClick={() => setActiveChart('active_clients')}
+            >
+              Active Clients
+            </button>
+            <button 
+              className={`chart-tab ${activeChart === 'new_active_clients' ? 'active' : ''}`}
+              onClick={() => setActiveChart('new_active_clients')}
+            >
+              New Clients
+            </button>
+            <button 
+              className={`chart-tab ${activeChart === 'partner_id' ? 'active' : ''}`}
+              onClick={() => setActiveChart('partner_id')}
+            >
+              Active Partners
+            </button>
+            </div>
+          </div>
+          
+          {/* View Toggle */}
+          <div className="view-toggle">
+            <label className="toggle-switch">
+              <span className="toggle-label">Toggle Trends</span>
+              <input
+                type="checkbox"
+                checked={showTrends}
+                onChange={(e) => setShowTrends(e.target.checked)}
+              />
+              <span className="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        
+        {/* Single Selected Chart */}
+        <div className="chart-container">
+          <RechartsChart 
+            data={analytics.monthly_charts[activeChart]} 
+            metric={activeChart}
+          />
+        </div>
+      </div>
 
-
-      {/* Stacked Bar Charts */}
+      {/* Stacked Bar Charts - Moved to bottom */}
       <div className="stacked-charts-section">
         <div className="stacked-charts">
           <div className="stacked-chart">
@@ -284,68 +344,6 @@ const TierAnalytics = ({ analytics, formatCurrency, formatNumber, formatVolume, 
               ))}
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Charts Section */}
-      <div className="charts-section">
-        <div className="chart-controls">
-          <div className="chart-selection">
-            <h3 className="heading-md">Monthly Performance Trends</h3>
-          <div className="chart-tabs">
-            <button 
-              className={`chart-tab ${activeChart === 'total_earnings' ? 'active' : ''}`}
-              onClick={() => setActiveChart('total_earnings')}
-            >
-              Partner Earnings
-            </button>
-            <button 
-              className={`chart-tab ${activeChart === 'company_revenue' ? 'active' : ''}`}
-              onClick={() => setActiveChart('company_revenue')}
-            >
-              Company Revenue
-            </button>
-            <button 
-              className={`chart-tab ${activeChart === 'active_clients' ? 'active' : ''}`}
-              onClick={() => setActiveChart('active_clients')}
-            >
-              Active Clients
-            </button>
-            <button 
-              className={`chart-tab ${activeChart === 'new_active_clients' ? 'active' : ''}`}
-              onClick={() => setActiveChart('new_active_clients')}
-            >
-              New Clients
-            </button>
-            <button 
-              className={`chart-tab ${activeChart === 'partner_id' ? 'active' : ''}`}
-              onClick={() => setActiveChart('partner_id')}
-            >
-              Active Partners
-            </button>
-            </div>
-          </div>
-          
-          {/* View Toggle */}
-          <div className="view-toggle">
-            <label className="toggle-switch">
-              <span className="toggle-label">Toggle Trends</span>
-              <input
-                type="checkbox"
-                checked={showTrends}
-                onChange={(e) => setShowTrends(e.target.checked)}
-              />
-              <span className="toggle-slider"></span>
-            </label>
-          </div>
-        </div>
-        
-        {/* Single Selected Chart */}
-        <div className="chart-container">
-          <RechartsChart 
-            data={analytics.monthly_charts[activeChart]} 
-            metric={activeChart}
-          />
         </div>
       </div>
 

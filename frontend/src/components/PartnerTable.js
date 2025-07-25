@@ -12,7 +12,6 @@ const PartnerTable = ({
   sortField,
   sortDirection,
   onSortChange,
-  onReset,
   activeFilters,
   // Pagination props
   currentPage,
@@ -64,18 +63,26 @@ const PartnerTable = ({
 
   // Get EtR ratio color class based on percentage value
   const getEtrColorClass = (earnings, revenue) => {
-    if (!revenue || revenue === 0) return 'etr-fair';
+    if (!revenue || revenue === 0) return 'etr-critically-low';
     const ratio = (earnings / revenue) * 100;
     
     // Red for any loss scenario (revenue negative OR earnings > positive revenue)
-    if (revenue < 0 || earnings > revenue) {
-      return 'etr-loss';
+    if (revenue < 0) {
+      return 'etr-double-loss';
+    } else if (earnings > revenue) {
+      return 'etr-unprofitable';
+    } else if (ratio >= 0.1 && ratio < 10) {
+      return 'etr-critically-low'; // Purple
+    } else if (ratio >= 10 && ratio < 20) {
+      return 'etr-very-low'; // Blue
+    } else if (ratio >= 20 && ratio < 30) {
+      return 'etr-low'; // Yellow
     } else if (ratio >= 30 && ratio <= 40) {
-      return 'etr-excellent'; // Green for 30-40%
+      return 'etr-fair'; // Green
     } else if (ratio > 40) {
-      return 'etr-good'; // Dark orange for 40%+
+      return 'etr-high'; // Orange
     } else {
-      return 'etr-fair'; // Yellow for 0-30%
+      return 'etr-critically-low';
     }
   };
 
@@ -111,17 +118,6 @@ const PartnerTable = ({
         <h3 className="heading-md">Partners ({formatNumber(totalCount || partners.length)})</h3>
         
         <div className="table-header-actions">
-          {/* Reset Button - show when filters are active or non-default sorting */}
-          {(Object.keys(activeFilters || {}).length > 0 || sortField !== 'total_earnings' || sortDirection !== 'desc') && (
-            <button 
-              className="btn-sm btn-ghost reset-btn"
-              onClick={onReset}
-              title="Reset filters and sorting"
-            >
-              ↻ Reset
-            </button>
-          )}
-        
         {/* Pagination Controls in Header */}
         {totalCount > 0 && (
           <Pagination
@@ -150,7 +146,7 @@ const PartnerTable = ({
                 Country
               </th>
               <th>
-                Region
+                GP Region
               </th>
               <th>
                 Tier

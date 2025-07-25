@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 import PartnerDetail from './PartnerDetail';
 import AICopilot from './AICopilot';
 import LoadingScreen from './LoadingScreen';
@@ -17,7 +18,7 @@ const PartnerDetailPage = ({ formatCurrency, formatNumber, formatVolume, getTier
     const fetchPartnerDetail = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`/api/partners/${partnerId}`);
+        const response = await axios.get(`${API_BASE_URL}/api/partners/${partnerId}`);
         setPartner(response.data);
       } catch (err) {
         console.error('Error fetching partner detail:', err);

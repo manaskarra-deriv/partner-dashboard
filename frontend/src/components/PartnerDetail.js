@@ -256,8 +256,8 @@ const PartnerDetail = ({ partner, formatCurrency, formatNumber, formatVolume, ge
               </span>
             </div>
             <div className="detail-row">
-              <span className="detail-label">Region</span>
-              <span className="detail-value">{partnerInfo.region}</span>
+                              <span className="detail-label">GP Region</span>
+                <span className="detail-value">{partnerInfo.region}</span>
             </div>
             <div className="detail-row">
               <span className="detail-label">Joined Date</span>

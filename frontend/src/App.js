@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
+import { API_BASE_URL } from './config';
 import './App.css';
 
 // Components
@@ -81,7 +82,7 @@ function App() {
 
   const fetchOverview = async () => {
     try {
-      const response = await axios.get('/api/partner-overview');
+      const response = await axios.get(`${API_BASE_URL}/api/partner-overview`);
       setOverview(response.data);
     } catch (err) {
       console.error('Error fetching overview:', err);
@@ -100,7 +101,7 @@ function App() {
         limit: partnersPerPage,
         offset: offset
       };
-      const response = await axios.get('/api/partners', { params });
+      const response = await axios.get(`${API_BASE_URL}/api/partners`, { params });
       setPartners(response.data.partners);
       setTotalCount(response.data.total_count);
       setHasMore(response.data.has_more);
@@ -114,7 +115,7 @@ function App() {
 
   const fetchFilters = async () => {
     try {
-      const response = await axios.get('/api/filters');
+      const response = await axios.get(`${API_BASE_URL}/api/filters`);
       setFilters(response.data);
     } catch (err) {
       console.error('Error fetching filters:', err);
@@ -125,7 +126,7 @@ function App() {
     try {
       // Add cache busting parameter to ensure fresh data
       const cacheBuster = `?t=${Date.now()}`;
-      const response = await axios.get(`/api/tier-analytics${cacheBuster}`);
+      const response = await axios.get(`${API_BASE_URL}/api/tier-analytics${cacheBuster}`);
       setTierAnalytics(response.data);
     } catch (err) {
       console.error('Error fetching tier analytics:', err);
@@ -153,16 +154,6 @@ function App() {
     }
     setSortField(field);
     setSortDirection(newDirection);
-  };
-
-  const handleReset = () => {
-    // Reset all filters and sorting to default state
-    setActiveFilters({});
-    setSortField('total_earnings');
-    setSortDirection('desc');
-    setCurrentPage(1);
-    // Fetch partners with default settings
-    fetchPartners({}, 1);
   };
 
   const handlePartnerSelect = (partner) => {
@@ -338,7 +329,7 @@ function App() {
               </button>
             )}
             <img src="/Deriv.png" alt="Deriv" className="logo" />
-            <h1 className="heading-lg">Partner Dashboard</h1>
+            <h1 className="heading-lg">Partner Performance Analysis & Management Tool</h1>
           </div>
         </div>
       </header>
@@ -356,7 +347,6 @@ function App() {
               loading={loading}
               onFilterChange={handleFilterChange}
               onPartnerSelect={handlePartnerSelect}
-              onReset={handleReset}
               formatCurrency={formatCurrency}
               formatNumber={formatNumber}
               formatVolume={formatVolume}

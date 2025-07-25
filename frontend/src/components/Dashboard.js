@@ -14,7 +14,6 @@ const Dashboard = ({
   loading, 
   onFilterChange, 
   onPartnerSelect,
-  onReset,
   formatCurrency,
   formatNumber,
   formatVolume,
@@ -84,7 +83,6 @@ const Dashboard = ({
             sortField={sortField}
             sortDirection={sortDirection}
             onSortChange={onSortChange}
-            onReset={onReset}
             activeFilters={activeFilters}
             // Pagination props
             currentPage={currentPage}

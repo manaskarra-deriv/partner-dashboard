@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 const AIAssistant = () => {
   const [messages, setMessages] = useState([
@@ -36,7 +37,7 @@ const AIAssistant = () => {
     setIsLoading(true);
 
     try {
-      const response = await axios.post('/api/analytics', {
+      const response = await axios.post(`${API_BASE_URL}/api/analytics`, {
         query: userMessage.content
       });
 
@@ -159,7 +160,7 @@ const AIAssistant = () => {
     "Show me the top 10 partners",
     "What's the revenue breakdown by country?",
     "How are partners distributed across tiers?",
-    "Which region has the most partners?",
+                "Which GP region has the most partners?",
     "Who are the API developer partners?"
   ];
 
