@@ -4,18 +4,14 @@ const config = {
   development: {
     apiBaseUrl: '', // Use relative URLs with proxy
   },
-  // When deployed via ngrok (frontend served statically, backend still local)
+  // When deployed via ngrok (frontend served statically, backend proxied)
   production: {
-    apiBaseUrl: 'http://localhost:5003', // Direct connection to local backend
+    apiBaseUrl: '', // Use relative URLs with proxy - ngrok will proxy to backend
   }
 };
 
-// Determine if we're in a tunneled/ngrok environment
-const isNgrokDeployment = window.location.hostname.includes('ngrok') || 
-                          window.location.hostname.includes('tunnel') ||
-                          process.env.NODE_ENV === 'production';
-
-const currentConfig = isNgrokDeployment ? config.production : config.development;
+// Always use empty string to leverage the proxy configuration
+const currentConfig = config.development; // Always use proxy approach
 
 export const API_BASE_URL = currentConfig.apiBaseUrl;
 export default currentConfig; 
