@@ -486,6 +486,99 @@ def get_partner_detail(partner_id):
         partner_info = latest_record.to_dict()
         partner_info.update(ytd_totals)
         
+        # Get additional partner information from database (including date_joined for age calculation)
+        try:
+            partner_db_info = db.get_partner_info_details(partner_id)
+            if partner_db_info:
+                # Calculate partner age if date_joined is available
+                if partner_db_info.get('date_joined'):
+                    from datetime import datetime
+                    
+                    # Parse the date_joined string back to datetime for calculation
+                    date_joined = datetime.fromisoformat(partner_db_info['date_joined'].replace('Z', '+00:00'))
+                    current_date = datetime.now(date_joined.tzinfo) if date_joined.tzinfo else datetime.now()
+                    
+                    # Calculate age in days
+                    age_days = (current_date - date_joined).days
+                    
+                    # Calculate age components
+                    years = age_days // 365
+                    remaining_days = age_days % 365
+                    months = remaining_days // 30
+                    days = remaining_days % 30
+                    
+                    # Create age badge based on tenure
+                    if age_days >= 1825:  # 5+ years
+                        age_badge = 'age-5yr-plus'
+                        age_milestone = '5+ Years'
+                    elif age_days >= 1460:  # 4+ years  
+                        age_badge = 'age-4yr'
+                        age_milestone = '4+ Years'
+                    elif age_days >= 1095:  # 3+ years
+                        age_badge = 'age-3yr'
+                        age_milestone = '3+ Years'
+                    elif age_days >= 730:   # 2+ years
+                        age_badge = 'age-2yr'
+                        age_milestone = '2+ Years'
+                    elif age_days >= 548:   # 18+ months
+                        age_badge = 'age-18mo'
+                        age_milestone = '18+ Months'
+                    elif age_days >= 365:   # 1+ year
+                        age_badge = 'age-1yr'
+                        age_milestone = '1+ Year'
+                    elif age_days >= 180:   # 6+ months
+                        age_badge = 'age-6mo'
+                        age_milestone = '6+ Months'
+                    elif age_days >= 90:    # 3+ months
+                        age_badge = 'age-3mo'
+                        age_milestone = '3+ Months'
+                    elif age_days >= 30:    # 1+ month
+                        age_badge = 'age-1mo'
+                        age_milestone = '1+ Month'
+                    else:
+                        age_badge = 'new'
+                        age_milestone = 'New Partner'
+                    
+                    # Create readable age string
+                    if years > 0:
+                        if months > 0:
+                            age_display = f"{years} year{'s' if years != 1 else ''}, {months} month{'s' if months != 1 else ''}"
+                        else:
+                            age_display = f"{years} year{'s' if years != 1 else ''}"
+                    elif months > 0:
+                        if days > 0:
+                            age_display = f"{months} month{'s' if months != 1 else ''}, {days} day{'s' if days != 1 else ''}"
+                        else:
+                            age_display = f"{months} month{'s' if months != 1 else ''}"
+                    else:
+                        age_display = f"{age_days} day{'s' if age_days != 1 else ''}"
+                    
+                    # Add age information to partner_info
+                    partner_info.update({
+                        'date_joined': partner_db_info['date_joined'],
+                        'partner_age_days': age_days,
+                        'partner_age_display': age_display,
+                        'partner_age_badge': age_badge,
+                        'partner_age_milestone': age_milestone
+                    })
+                
+                # Add other useful fields from partner_info table
+                useful_fields = [
+                    'partner_status', 'partner_level', 'aff_type', 'activation_phase',
+                    'is_master_plan', 'is_revshare_plan', 'is_turnover_plan', 'is_cpa_plan', 'is_ib_plan',
+                    'parent_partner_id', 'subaff_count', 'first_client_joined_date', 'first_client_deposit_date',
+                    'first_client_trade_date', 'first_earning_date', 'last_client_joined_date', 'last_earning_date',
+                    'webinar_count', 'seminar_count', 'sponsorship_event_count', 'conference_count', 'attended_onboarding_event'
+                ]
+                
+                for field in useful_fields:
+                    if field in partner_db_info and partner_db_info[field] is not None:
+                        partner_info[field] = partner_db_info[field]
+                        
+        except Exception as e:
+            logger.warning(f"Could not fetch additional partner info for {partner_id}: {str(e)}")
+            # Continue without the additional info
+        
         partner_detail = {
             'partner_info': partner_info,
             'current_month': current_month,
@@ -553,6 +646,59 @@ def get_partner_funnel(partner_id):
         
     except Exception as e:
         logger.error(f"Error getting funnel data for partner {partner_id}: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/partner-application-countries', methods=['GET'])
+def get_partner_application_countries():
+    """Get list of all countries available for partner application funnel filtering"""
+    try:
+        countries = db.get_partner_application_countries()
+        return jsonify({
+            'countries': countries,
+            'total_countries': len(countries)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting partner application countries: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/partner-application-funnel', methods=['GET'])
+def get_partner_application_funnel():
+    """Get partner application funnel analytics including monthly trends, activation metrics, and distribution data"""
+    try:
+        # Get optional filter parameters
+        selected_month = request.args.get('month', 'all')
+        countries_param = request.args.get('countries', '')
+        
+        # Parse countries parameter (comma-separated values)
+        selected_countries = []
+        if countries_param and countries_param.strip():
+            selected_countries = [country.strip() for country in countries_param.split(',') if country.strip()]
+        
+        # Get application funnel data from Supabase with filters
+        funnel_data = db.get_partner_application_funnel_data(selected_month, selected_countries)
+        
+        if not funnel_data:
+            return jsonify({
+                'monthly_data': [],
+                'country_distribution': [],
+                'region_distribution': [],
+                'summary': {},
+                'error': 'No application funnel data available'
+            })
+        
+        return jsonify({
+            'monthly_data': funnel_data.get('monthly_data', []),
+            'country_distribution': funnel_data.get('country_distribution', []),
+            'region_distribution': funnel_data.get('region_distribution', []),
+            'summary': funnel_data.get('summary', {}),
+            'total_months': len(funnel_data.get('monthly_data', [])),
+            'total_countries': len(funnel_data.get('country_distribution', [])),
+            'total_regions': len(funnel_data.get('region_distribution', []))
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting partner application funnel data: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/filters', methods=['GET'])
@@ -1321,6 +1467,555 @@ def graceful_shutdown(signum=None, frame=None):
 atexit.register(graceful_shutdown)
 signal.signal(signal.SIGTERM, graceful_shutdown)
 signal.signal(signal.SIGINT, graceful_shutdown)
+
+@app.route('/api/country-tier-analytics', methods=['GET'])
+def get_country_tier_analytics():
+    """Get comprehensive tier analytics for a specific country or region using CSV data"""
+    try:
+        if partner_data is None:
+            return jsonify({'error': 'No data available'}), 400
+        
+        country = request.args.get('country')
+        region = request.args.get('region')
+        
+        if not country and not region:
+            return jsonify({'error': 'Either country or region parameter is required'}), 400
+        
+        # Filter CSV data by country or region
+        filtered_data = partner_data.copy()
+        
+        if country:
+            filtered_data = filtered_data[filtered_data['country'] == country]
+        elif region:
+            filtered_data = filtered_data[filtered_data['region'] == region]
+        
+        if filtered_data.empty:
+            return jsonify({
+                'success': True,
+                'data': {
+                    'summary': {},
+                    'monthly_tier_data': {},
+                    'country_rankings': {},
+                    'available_months': []
+                },
+                'country': country,
+                'region': region
+            })
+        
+        # Get each partner's latest tier for consistent grouping
+        partner_latest_tier = filtered_data.groupby('partner_id')['partner_tier'].last().reset_index()
+        partner_latest_tier.columns = ['partner_id', 'current_tier']
+        
+        # Merge current tier back to all monthly data for consistent grouping
+        monthly_data_with_current_tier = filtered_data.merge(partner_latest_tier, on='partner_id')
+        
+        # Get monthly data by current tier
+        monthly_tier_data = monthly_data_with_current_tier.groupby(['month', 'current_tier']).agg({
+            'partner_id': 'nunique',
+            'total_earnings': 'sum',
+            'company_revenue': 'sum',
+            'total_deposits': 'sum',
+            'active_clients': 'sum',
+            'new_active_clients': 'sum',
+            'volume_usd': 'sum'
+        }).reset_index()
+        
+        # Rename for consistency
+        monthly_tier_data = monthly_tier_data.rename(columns={'current_tier': 'partner_tier'})
+        
+        # Sort by month descending first (latest to earliest) and keep original date for sorting
+        monthly_tier_data = monthly_tier_data.sort_values('month', ascending=False)
+        
+        # Create a month sorting reference before converting to string
+        month_order = monthly_tier_data['month'].dt.to_period('M').drop_duplicates().sort_values(ascending=False)
+        month_order_list = [period.strftime('%b %Y') for period in month_order]
+        
+        # Convert month to string for JSON serialization
+        monthly_tier_data['month'] = monthly_tier_data['month'].dt.strftime('%b %Y')
+        
+        # Get overall totals by tier
+        unique_partners = filtered_data.groupby('partner_id').agg({
+            'partner_tier': 'last',
+            'total_earnings': 'sum',
+            'company_revenue': 'sum',
+            'total_deposits': 'sum',
+            'active_clients': 'last',
+            'new_active_clients': 'sum'
+        }).reset_index()
+        
+        tier_totals = unique_partners.groupby('partner_tier').agg({
+            'partner_id': 'count',
+            'total_earnings': 'sum',
+            'company_revenue': 'sum',
+            'total_deposits': 'sum',
+            'active_clients': 'sum',
+            'new_active_clients': 'sum'
+        }).reset_index()
+        
+        # Calculate overall summary
+        total_partners = tier_totals['partner_id'].sum()
+        # Calculate active partners (excluding Inactive tier)
+        active_tier_totals = tier_totals[tier_totals['partner_tier'] != 'Inactive']
+        total_active_partners = active_tier_totals['partner_id'].sum()
+        total_earnings = tier_totals['total_earnings'].sum()
+        total_company_revenue = tier_totals['company_revenue'].sum()
+        total_deposits = tier_totals['total_deposits'].sum()
+        total_clients = tier_totals['active_clients'].sum()
+        
+        # Format monthly tier data for frontend (preserve chronological order)
+        from collections import OrderedDict
+        monthly_data = OrderedDict()
+        
+        # Process in chronological order (latest first)
+        for month_str in month_order_list:
+            monthly_data[month_str] = {}
+        
+        # Fill in the tier data
+        for _, row in monthly_tier_data.iterrows():
+            month_str = row['month']
+            tier = row['partner_tier']
+            monthly_data[month_str][tier] = {
+                'count': int(row['partner_id']),
+                'earnings': float(row['total_earnings']),
+                'revenue': float(row['company_revenue']),
+                'deposits': float(row['total_deposits']),
+                'active_clients': int(row['active_clients']),
+                'new_clients': int(row['new_active_clients']),
+                'volume': float(row['volume_usd'])
+            }
+        
+        # Calculate real rankings by comparing against all countries
+        all_countries_data = partner_data.groupby('country').agg({
+            'partner_id': 'nunique',
+            'total_earnings': 'sum',
+            'company_revenue': 'sum',
+            'total_deposits': 'sum',
+            'active_clients': 'sum'
+        }).reset_index()
+        
+        # Calculate active partners for each country (excluding Inactive tier)
+        active_partners_by_country = []
+        for country_name in partner_data['country'].unique():
+            if pd.isna(country_name):
+                continue
+            country_data = partner_data[partner_data['country'] == country_name]
+            country_partner_tiers = country_data.groupby('partner_id')['partner_tier'].last().reset_index()
+            active_partners_count = len(country_partner_tiers[country_partner_tiers['partner_tier'] != 'Inactive'])
+            active_partners_by_country.append({
+                'country': country_name,
+                'active_partners': active_partners_count
+            })
+        
+        active_partners_df = pd.DataFrame(active_partners_by_country)
+        all_countries_data = all_countries_data.merge(active_partners_df, on='country', how='left')
+        all_countries_data['active_partners'] = all_countries_data['active_partners'].fillna(0)
+        
+        # Calculate rankings
+        all_countries_data['earnings_rank'] = all_countries_data['total_earnings'].rank(method='dense', ascending=False)
+        all_countries_data['revenue_rank'] = all_countries_data['company_revenue'].rank(method='dense', ascending=False)
+        all_countries_data['deposits_rank'] = all_countries_data['total_deposits'].rank(method='dense', ascending=False)
+        all_countries_data['clients_rank'] = all_countries_data['active_clients'].rank(method='dense', ascending=False)
+        all_countries_data['partners_rank'] = all_countries_data['partner_id'].rank(method='dense', ascending=False)
+        all_countries_data['active_partners_rank'] = all_countries_data['active_partners'].rank(method='dense', ascending=False)
+        
+        # Get rankings for the current country
+        current_country_data = all_countries_data[all_countries_data['country'] == (country if country else region)]
+        
+        if not current_country_data.empty:
+            earnings_rank = int(current_country_data.iloc[0]['earnings_rank'])
+            revenue_rank = int(current_country_data.iloc[0]['revenue_rank'])
+            deposits_rank = int(current_country_data.iloc[0]['deposits_rank'])
+            clients_rank = int(current_country_data.iloc[0]['clients_rank'])
+            partners_rank = int(current_country_data.iloc[0]['partners_rank'])
+            active_partners_rank = int(current_country_data.iloc[0]['active_partners_rank'])
+        else:
+            # Fallback if country not found
+            earnings_rank = revenue_rank = deposits_rank = clients_rank = partners_rank = active_partners_rank = 1
+        
+        # Create summary with real rankings
+        summary = {
+            'partner_country': country if country else None,
+            'partner_region': region if region else None,
+            'total_partners': int(total_partners),
+            'total_active_partners': int(total_active_partners),
+            'total_company_revenue': float(total_company_revenue),
+            'total_partner_earnings': float(total_earnings),
+            'total_deposits': float(total_deposits),
+            'total_new_clients': int(total_clients),
+            'partners_rank': partners_rank,
+            'active_partners_rank': active_partners_rank,
+            'revenue_rank': revenue_rank,
+            'earnings_rank': earnings_rank,
+            'deposits_rank': deposits_rank,
+            'clients_rank': clients_rank
+        }
+        
+        # Calculate tier-specific country rankings and monthly rankings
+        tier_country_rankings = {}
+        monthly_rankings = {}
+        
+        # For each tier, calculate how this country ranks against all other countries
+        tiers = ['Platinum', 'Gold', 'Silver', 'Bronze', 'Inactive']
+        for tier in tiers:
+            # Calculate tier totals for all countries
+            tier_countries_data = []
+            all_countries = partner_data['country'].unique()
+            
+            for other_country in all_countries:
+                if pd.isna(other_country):
+                    continue
+                    
+                country_data = partner_data[partner_data['country'] == other_country]
+                country_partner_tiers = country_data.groupby('partner_id')['partner_tier'].last().reset_index()
+                tier_partners = country_partner_tiers[country_partner_tiers['partner_tier'] == tier]['partner_id'].tolist()
+                
+                if tier_partners:
+                    tier_data = country_data[country_data['partner_id'].isin(tier_partners)]
+                    tier_totals = tier_data.agg({
+                        'total_earnings': 'sum',
+                        'company_revenue': 'sum',
+                        'total_deposits': 'sum',
+                        'active_clients': 'sum',
+                        'new_active_clients': 'sum',
+                        'volume_usd': 'sum'
+                    })
+                    
+                    tier_countries_data.append({
+                        'country': other_country,
+                        'earnings': tier_totals['total_earnings'],
+                        'revenue': tier_totals['company_revenue'],
+                        'deposits': tier_totals['total_deposits'],
+                        'active_clients': tier_totals['active_clients'],
+                        'new_clients': tier_totals['new_active_clients'],
+                        'volume': tier_totals['volume_usd']
+                    })
+            
+            if tier_countries_data:
+                tier_df = pd.DataFrame(tier_countries_data)
+                tier_df['earnings_rank'] = tier_df['earnings'].rank(method='dense', ascending=False)
+                tier_df['revenue_rank'] = tier_df['revenue'].rank(method='dense', ascending=False)
+                tier_df['deposits_rank'] = tier_df['deposits'].rank(method='dense', ascending=False)
+                tier_df['active_clients_rank'] = tier_df['active_clients'].rank(method='dense', ascending=False)
+                tier_df['new_clients_rank'] = tier_df['new_clients'].rank(method='dense', ascending=False)
+                tier_df['volume_rank'] = tier_df['volume'].rank(method='dense', ascending=False)
+                
+                current_tier_data = tier_df[tier_df['country'] == (country if country else region)]
+                if not current_tier_data.empty:
+                    tier_country_rankings[tier] = {
+                        'earnings_rank': int(current_tier_data.iloc[0]['earnings_rank']),
+                        'revenue_rank': int(current_tier_data.iloc[0]['revenue_rank']),
+                        'deposits_rank': int(current_tier_data.iloc[0]['deposits_rank']),
+                        'active_clients_rank': int(current_tier_data.iloc[0]['active_clients_rank']),
+                        'new_clients_rank': int(current_tier_data.iloc[0]['new_clients_rank']),
+                        'volume_rank': int(current_tier_data.iloc[0]['volume_rank'])
+                    }
+        
+        # Calculate monthly rankings for each metric
+        for month_str in monthly_data.keys():
+            monthly_rankings[month_str] = {}
+            
+            # Get all countries' data for this month for comparison
+            month_date = pd.to_datetime(month_str, format='%b %Y')
+            month_data_all = partner_data[partner_data['month'] == month_date]
+            
+            if not month_data_all.empty:
+                countries_month_data = []
+                all_countries = month_data_all['country'].unique()
+                
+                for other_country in all_countries:
+                    if pd.isna(other_country):
+                        continue
+                        
+                    country_month_data = month_data_all[month_data_all['country'] == other_country]
+                    country_totals = country_month_data.agg({
+                        'total_earnings': 'sum',
+                        'company_revenue': 'sum',
+                        'total_deposits': 'sum',
+                        'active_clients': 'sum',
+                        'new_active_clients': 'sum',
+                        'volume_usd': 'sum'
+                    })
+                    
+                    countries_month_data.append({
+                        'country': other_country,
+                        'earnings': country_totals['total_earnings'],
+                        'revenue': country_totals['company_revenue'],
+                        'deposits': country_totals['total_deposits'],
+                        'active_clients': country_totals['active_clients'],
+                        'new_clients': country_totals['new_active_clients'],
+                        'volume': country_totals['volume_usd']
+                    })
+                
+                if countries_month_data:
+                    month_df = pd.DataFrame(countries_month_data)
+                    month_df['earnings_rank'] = month_df['earnings'].rank(method='dense', ascending=False)
+                    month_df['revenue_rank'] = month_df['revenue'].rank(method='dense', ascending=False)
+                    month_df['deposits_rank'] = month_df['deposits'].rank(method='dense', ascending=False)
+                    month_df['active_clients_rank'] = month_df['active_clients'].rank(method='dense', ascending=False)
+                    month_df['new_clients_rank'] = month_df['new_clients'].rank(method='dense', ascending=False)
+                    month_df['volume_rank'] = month_df['volume'].rank(method='dense', ascending=False)
+                    
+                    current_month_data = month_df[month_df['country'] == (country if country else region)]
+                    if not current_month_data.empty:
+                        monthly_rankings[month_str] = {
+                            'earnings_rank': int(current_month_data.iloc[0]['earnings_rank']),
+                            'revenue_rank': int(current_month_data.iloc[0]['revenue_rank']),
+                            'deposits_rank': int(current_month_data.iloc[0]['deposits_rank']),
+                            'active_clients_rank': int(current_month_data.iloc[0]['active_clients_rank']),
+                            'new_clients_rank': int(current_month_data.iloc[0]['new_clients_rank']),
+                            'volume_rank': int(current_month_data.iloc[0]['volume_rank'])
+                        }
+
+        analytics_data = {
+            'summary': summary,
+            'monthly_tier_data': monthly_data,
+            'tier_country_rankings': tier_country_rankings,
+            'monthly_rankings': monthly_rankings,
+            'country_rankings': {},  # Not applicable for single country view
+            'available_months': list(monthly_data.keys()) if monthly_data else []  # Already sorted chronologically
+        }
+        
+        return jsonify({
+            'success': True,
+            'data': analytics_data,
+            'country': country,
+            'region': region
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting country tier analytics: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/tier-detail', methods=['GET'])
+def get_tier_detail():
+    """Get detailed tier performance data with rankings for tier detail modal"""
+    try:
+        country = request.args.get('country')
+        region = request.args.get('region')
+        tier = request.args.get('tier')
+        month = request.args.get('month')
+        
+        if not country and not region:
+            return jsonify({'error': 'Either country or region parameter is required'}), 400
+        
+        detail_data = db.get_tier_detail_data(
+            country=country, 
+            region=region, 
+            tier=tier, 
+            month=month
+        )
+        
+        return jsonify({
+            'success': True,
+            'data': detail_data,
+            'filters': {
+                'country': country,
+                'region': region,
+                'tier': tier,
+                'month': month
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting tier detail data: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/monthly-country-funnel', methods=['GET'])
+def get_monthly_country_funnel():
+    """Get monthly funnel data for a specific country/region with rankings"""
+    try:
+        country = request.args.get('country')
+        region = request.args.get('region')
+        
+        if not country and not region:
+            return jsonify({'error': 'Either country or region parameter is required'}), 400
+        
+        funnel_data = db.get_monthly_country_funnel_data(country=country, region=region)
+        
+        return jsonify({
+            'success': True,
+            'data': funnel_data,
+            'country': country,
+            'region': region
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting monthly country funnel data: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/tier-performance', methods=['GET'])
+def get_tier_performance():
+    """Get detailed tier performance data with rankings for a specific tier and country"""
+    try:
+        if partner_data is None:
+            return jsonify({'error': 'No data available'}), 400
+        
+        country = request.args.get('country')
+        region = request.args.get('region')
+        tier = request.args.get('tier')
+        
+        if not country and not region:
+            return jsonify({'error': 'Either country or region parameter is required'}), 400
+            
+        if not tier:
+            return jsonify({'error': 'Tier parameter is required'}), 400
+        
+        # Filter CSV data by country or region and tier
+        filtered_data = partner_data.copy()
+        
+        if country:
+            filtered_data = filtered_data[filtered_data['country'] == country]
+        elif region:
+            filtered_data = filtered_data[filtered_data['region'] == region]
+        
+        # Filter by partners who have the specified tier (latest tier)
+        partner_latest_tier = filtered_data.groupby('partner_id')['partner_tier'].last().reset_index()
+        tier_partners = partner_latest_tier[partner_latest_tier['partner_tier'] == tier]['partner_id'].tolist()
+        
+        if not tier_partners:
+            return jsonify({
+                'success': True,
+                'data': [],
+                'tier': tier,
+                'country': country,
+                'region': region
+            })
+        
+        # Get data only for partners with this tier
+        tier_filtered_data = filtered_data[filtered_data['partner_id'].isin(tier_partners)]
+        
+        # Get monthly performance for these partners
+        monthly_performance = tier_filtered_data.groupby('month').agg({
+            'partner_id': 'nunique',
+            'total_earnings': 'sum',
+            'company_revenue': 'sum',
+            'total_deposits': 'sum',
+            'active_clients': 'sum',
+            'new_active_clients': 'sum',
+            'volume_usd': 'sum'
+        }).reset_index()
+        
+        # Calculate EtR and EtD ratios
+        monthly_performance['etr_ratio'] = monthly_performance.apply(
+            lambda row: round((row['total_earnings'] / row['company_revenue'] * 100), 2) 
+            if row['company_revenue'] > 0 else 0, axis=1
+        )
+        monthly_performance['etd_ratio'] = monthly_performance.apply(
+            lambda row: round((row['total_earnings'] / row['total_deposits'] * 100), 2) 
+            if row['total_deposits'] > 0 else 0, axis=1
+        )
+        
+        # Now calculate rankings compared to ALL countries for this tier
+        # Get all countries' data for this tier to calculate rankings
+        all_countries_tier_data = []
+        
+        for compare_country in partner_data['country'].unique():
+            if pd.isna(compare_country):
+                continue
+                
+            country_data = partner_data[partner_data['country'] == compare_country]
+            country_partner_tiers = country_data.groupby('partner_id')['partner_tier'].last().reset_index()
+            country_tier_partners = country_partner_tiers[country_partner_tiers['partner_tier'] == tier]['partner_id'].tolist()
+            
+            if not country_tier_partners:
+                continue
+                
+            country_tier_data = country_data[country_data['partner_id'].isin(country_tier_partners)]
+            
+            country_monthly = country_tier_data.groupby('month').agg({
+                'total_earnings': 'sum',
+                'company_revenue': 'sum',
+                'total_deposits': 'sum',
+                'active_clients': 'sum',
+                'new_active_clients': 'sum',
+                'volume_usd': 'sum'
+            }).reset_index()
+            
+            for _, row in country_monthly.iterrows():
+                all_countries_tier_data.append({
+                    'country': compare_country,
+                    'month': row['month'],
+                    'total_earnings': row['total_earnings'],
+                    'company_revenue': row['company_revenue'],
+                    'total_deposits': row['total_deposits'],
+                    'active_clients': row['active_clients'],
+                    'new_active_clients': row['new_active_clients'],
+                    'volume_usd': row['volume_usd']
+                })
+        
+        # Convert to DataFrame for ranking calculations
+        all_countries_df = pd.DataFrame(all_countries_tier_data)
+        
+        # Sort monthly performance by month descending
+        monthly_performance = monthly_performance.sort_values('month', ascending=False)
+        
+        # Calculate rankings for each month
+        formatted_results = []
+        for _, row in monthly_performance.iterrows():
+            month_str = row['month'].strftime('%b %Y')
+            
+            # Get rankings for this month across all countries
+            month_data = all_countries_df[all_countries_df['month'] == row['month']]
+            
+            if not month_data.empty:
+                # Calculate rankings (lower rank = better performance)
+                month_data_sorted = month_data.copy()
+                month_data_sorted['earnings_rank'] = month_data_sorted['total_earnings'].rank(method='dense', ascending=False)
+                month_data_sorted['revenue_rank'] = month_data_sorted['company_revenue'].rank(method='dense', ascending=False)
+                month_data_sorted['deposits_rank'] = month_data_sorted['total_deposits'].rank(method='dense', ascending=False)
+                month_data_sorted['clients_rank'] = month_data_sorted['active_clients'].rank(method='dense', ascending=False)
+                month_data_sorted['new_clients_rank'] = month_data_sorted['new_active_clients'].rank(method='dense', ascending=False)
+                month_data_sorted['volume_rank'] = month_data_sorted['volume_usd'].rank(method='dense', ascending=False)
+                
+                # Find current country's ranking
+                current_country_rank = month_data_sorted[month_data_sorted['country'] == (country if country else region)]
+                
+                if not current_country_rank.empty:
+                    rank_data = current_country_rank.iloc[0]
+                    earnings_rank = int(rank_data['earnings_rank'])
+                    revenue_rank = int(rank_data['revenue_rank'])
+                    deposits_rank = int(rank_data['deposits_rank'])
+                    clients_rank = int(rank_data['clients_rank'])
+                    new_clients_rank = int(rank_data['new_clients_rank'])
+                    volume_rank = int(rank_data['volume_rank'])
+                else:
+                    # Fallback rankings
+                    earnings_rank = revenue_rank = deposits_rank = clients_rank = new_clients_rank = volume_rank = 1
+            else:
+                # Fallback rankings
+                earnings_rank = revenue_rank = deposits_rank = clients_rank = new_clients_rank = volume_rank = 1
+            
+            formatted_results.append({
+                'month': month_str,
+                'tier': tier,
+                'total_earnings': float(row['total_earnings']),
+                'earnings_rank': earnings_rank,
+                'company_revenue': float(row['company_revenue']),
+                'revenue_rank': revenue_rank,
+                'etr_ratio': float(row['etr_ratio']),
+                'total_deposits': float(row['total_deposits']),
+                'deposits_rank': deposits_rank,
+                'etd_ratio': float(row['etd_ratio']),
+                'active_clients': int(row['active_clients']),
+                'clients_rank': clients_rank,
+                'new_clients': int(row['new_active_clients']),
+                'new_clients_rank': new_clients_rank,
+                'volume': float(row['volume_usd']),
+                'volume_rank': volume_rank
+            })
+        
+        return jsonify({
+            'success': True,
+            'data': formatted_results,
+            'tier': tier,
+            'country': country,
+            'region': region,
+            'total_months': len(formatted_results)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting tier performance data: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     logger.info("Starting PDash backend server...")

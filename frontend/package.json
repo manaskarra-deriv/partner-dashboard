@@ -25,7 +25,7 @@
     "react-scripts": "5.0.1",
     "recharts": "^3.1.0"
   },
-  "proxy": "http://localhost:5003",
+  "_proxy_disabled": "http://localhost:5003",
   "browserslist": {
     "production": [
       ">0.2%",

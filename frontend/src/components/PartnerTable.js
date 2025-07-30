@@ -13,6 +13,7 @@ const PartnerTable = ({
   sortDirection,
   onSortChange,
   activeFilters,
+  showPII = true,
   // Pagination props
   currentPage,
   totalPages,
@@ -28,6 +29,25 @@ const PartnerTable = ({
     return sortDirection === 'asc' ? 
       <span className="sort-icon sort-asc">▲</span> : 
       <span className="sort-icon sort-desc">▼</span>;
+  };
+
+  const maskPII = (text, type = 'default') => {
+    if (showPII) return text;
+    
+    if (!text) return text;
+    
+    switch (type) {
+      case 'name':
+        return '••••••';
+      case 'username':
+        return '@••••••';
+      case 'id':
+        return '••••••••';
+      case 'email':
+        return '••••••@••••••';
+      default:
+        return text.toString().replace(/./g, '•');
+    }
   };
 
   // Calculate EtR ratio percentage with proper negative logic
@@ -113,7 +133,7 @@ const PartnerTable = ({
   }
 
   return (
-    <div className="table-wrapper">
+    <div className={`table-wrapper ${!showPII ? 'pii-hidden' : ''}`}>
       <div className="table-header">
         <h3 className="heading-md">Partners ({formatNumber(totalCount || partners.length)})</h3>
         
@@ -174,12 +194,18 @@ const PartnerTable = ({
             {partners.map((partner, index) => (
               <tr key={partner.partner_id || index} className="table-row">
                 <td className="partner-id">
-                  <span className="mono-text">{partner.partner_id}</span>
+                  <span className={`mono-text ${!showPII ? 'pii-sensitive' : ''}`}>
+                    {maskPII(partner.partner_id, 'id')}
+                  </span>
                 </td>
                 <td className="partner-name">
                   <div className="name-cell">
-                    <strong>{partner.first_name} {partner.last_name}</strong>
-                    <small className="text-secondary">@{partner.username}</small>
+                    <strong className={!showPII ? 'pii-sensitive' : ''}>
+                      {maskPII(`${partner.first_name} ${partner.last_name}`, 'name')}
+                    </strong>
+                    <small className={`text-secondary ${!showPII ? 'pii-sensitive' : ''}`}>
+                      {maskPII(`@${partner.username}`, 'username')}
+                    </small>
                   </div>
                 </td>
                 <td>

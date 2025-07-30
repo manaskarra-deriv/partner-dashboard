@@ -27,6 +27,9 @@ function App() {
   const [totalCount, setTotalCount] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const partnersPerPage = 30;
+  
+  // PII Privacy state
+  const [showPII, setShowPII] = useState(true);
 
   // Check if we're on a partner detail page
   const isPartnerDetailPage = location.pathname.startsWith('/partner/');
@@ -267,11 +270,17 @@ function App() {
     } else {
       // For abbreviated formatting (tables, other places)
       const rounded = Math.round(number);
+      const absRounded = Math.abs(rounded);
+      const sign = rounded < 0 ? '-' : '';
       
-      if (rounded >= 1000000) {
-        return `${(rounded / 1000000).toFixed(1)}M`;
-      } else if (rounded >= 1000) {
-        return `${(rounded / 1000).toFixed(1)}K`;
+      if (absRounded >= 1000000000000) {
+        return `${sign}${(absRounded / 1000000000000).toFixed(1)}T`;
+      } else if (absRounded >= 1000000000) {
+        return `${sign}${(absRounded / 1000000000).toFixed(1)}B`;
+      } else if (absRounded >= 1000000) {
+        return `${sign}${(absRounded / 1000000).toFixed(1)}M`;
+      } else if (absRounded >= 1000) {
+        return `${sign}${(absRounded / 1000).toFixed(1)}K`;
       } else {
         return new Intl.NumberFormat('en-US', {
           minimumFractionDigits: 0,
@@ -331,6 +340,16 @@ function App() {
             <img src="/Deriv.png" alt="Deriv" className="logo" />
             <h1 className="heading-lg">Partner Performance Analysis & Management Tool</h1>
           </div>
+          <div className="header-right">
+            <button 
+              className={`pii-toggle ${showPII ? 'pii-visible' : 'pii-hidden'}`}
+              onClick={() => setShowPII(!showPII)}
+              title={showPII ? 'Hide PII Data' : 'Show PII Data'}
+            >
+              <span className="pii-icon">{showPII ? '👁️' : '🔒'}</span>
+              <span className="pii-text">{showPII ? 'Hide PII' : 'Show PII'}</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -354,6 +373,7 @@ function App() {
               sortField={sortField}
               sortDirection={sortDirection}
               onSortChange={handleSortChange}
+              showPII={showPII}
               // Pagination props
               currentPage={currentPage}
               totalPages={totalPages}
@@ -369,6 +389,7 @@ function App() {
               formatVolume={formatVolume}
               getTierColor={getTierColor}
               onBack={handleBackToDashboard}
+              showPII={showPII}
             />
           } />
         </Routes>

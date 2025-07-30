@@ -262,9 +262,22 @@ const PartnerDetail = ({ partner, formatCurrency, formatNumber, formatVolume, ge
             <div className="detail-row">
               <span className="detail-label">Joined Date</span>
               <span className="detail-value">
-                {partnerInfo.joined_date ? new Date(partnerInfo.joined_date).toLocaleDateString() : 'N/A'}
+                {partnerInfo.joined_date ? new Date(partnerInfo.joined_date).toLocaleDateString() : 
+                 partnerInfo.date_joined ? new Date(partnerInfo.date_joined).toLocaleDateString() : 'N/A'}
               </span>
             </div>
+            {partnerInfo.partner_age_display && (
+              <div className="detail-row">
+                <span className="detail-label">Age</span>
+                <span className="detail-value">
+                  {partnerInfo.partner_age_badge && (
+                    <span className={`age-badge ${partnerInfo.partner_age_badge}`}>
+                      {partnerInfo.partner_age_milestone}
+                    </span>
+                  )}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

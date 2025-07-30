@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import PartnerOverview from './PartnerOverview';
-import TierAnalytics from './TierAnalytics';
+import PerformanceAnalytics from './PerformanceAnalytics';
+import ApplicationFunnel from './ApplicationFunnel';
 import PartnerTable from './PartnerTable';
 import PartnerFilters from './PartnerFilters';
 import AICopilot from './AICopilot';
@@ -21,6 +22,7 @@ const Dashboard = ({
   sortField,
   sortDirection,
   onSortChange,
+  showPII,
   // Pagination props
   currentPage,
   totalPages,
@@ -28,74 +30,118 @@ const Dashboard = ({
   partnersPerPage,
   onPageChange
 }) => {
+  const [activeTab, setActiveTab] = useState('overview');
   return (
-    <>
-      {/* Overview Section */}
-      {overview && (
-        <section className="overview-section">
-          <div className="section-header">
-            <h2 className="heading-lg">Partner Overview</h2>
-            <p className="text-secondary">Real-time partner performance metrics</p>
-          </div>
-          <PartnerOverview 
-            overview={overview} 
-            formatCurrency={formatCurrency}
-            formatNumber={formatNumber}
-          />
-        </section>
-      )}
-
-      {/* Tier Analytics Section */}
-      <section className="tier-analytics-section">
-        <TierAnalytics 
-          analytics={tierAnalytics}
-          formatCurrency={formatCurrency}
-          formatNumber={formatNumber}
-          formatVolume={formatVolume}
-          mainLoading={loading}
-        />
-      </section>
-
-      {/* Filters and Table Section */}
-      <section className="partners-section">
-        <div className="section-header">
-          <h2 className="heading-lg">Partner Management</h2>
-          <p className="text-secondary">Filter and analyze partner performance</p>
+    <div className="dashboard-container">
+      {/* Main Navigation Tabs */}
+      <div className="dashboard-header">
+        <div className="dashboard-tabs">
+          <button 
+            className={`dashboard-tab ${activeTab === 'overview' ? 'active' : ''}`}
+            onClick={() => setActiveTab('overview')}
+          >
+            Partner Overview
+          </button>
+          <button 
+            className={`dashboard-tab ${activeTab === 'funnel' ? 'active' : ''}`}
+            onClick={() => setActiveTab('funnel')}
+          >
+            Application Funnel
+          </button>
+          <button 
+            className={`dashboard-tab ${activeTab === 'management' ? 'active' : ''}`}
+            onClick={() => setActiveTab('management')}
+          >
+            Partner Management
+          </button>
         </div>
+      </div>
 
-        <div className="filters-container">
-          <PartnerFilters
-            filters={filters}
-            activeFilters={activeFilters}
-            onFilterChange={onFilterChange}
-          />
-        </div>
+      {/* Tab Content */}
+      <div className="dashboard-content">
+        {activeTab === 'overview' && (
+          <>
+            {/* Overview Section */}
+            {overview && (
+              <section className="overview-section">
+                <div className="section-header">
+                  <h2 className="heading-lg">Partner Overview</h2>
+                  <p className="text-secondary">Real-time partner performance metrics</p>
+                </div>
+                <PartnerOverview 
+                  overview={overview} 
+                  formatCurrency={formatCurrency}
+                  formatNumber={formatNumber}
+                />
+              </section>
+            )}
 
-        <div className="table-container">
-          <PartnerTable
-            partners={partners}
-            loading={loading}
-            onPartnerSelect={onPartnerSelect}
-            formatCurrency={formatCurrency}
-            formatNumber={formatNumber}
-            formatVolume={formatVolume}
-            getTierColor={getTierColor}
-            sortField={sortField}
-            sortDirection={sortDirection}
-            onSortChange={onSortChange}
-            activeFilters={activeFilters}
-            // Pagination props
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalCount={totalCount}
-            partnersPerPage={partnersPerPage}
-            onPageChange={onPageChange}
-            mainLoading={loading}
-          />
-        </div>
-      </section>
+            {/* Performance Analytics Section */}
+            <section className="performance-analytics-section">
+              <PerformanceAnalytics 
+                analytics={tierAnalytics}
+                formatCurrency={formatCurrency}
+                formatNumber={formatNumber}
+                formatVolume={formatVolume}
+                mainLoading={loading}
+              />
+            </section>
+          </>
+        )}
 
-      {/* AI Copilot for Dashboard Insights */}
+        {activeTab === 'funnel' && (
+          <section className="application-funnel-section">
+            <ApplicationFunnel 
+              formatNumber={formatNumber}
+              getTierColor={getTierColor}
+              mainLoading={loading}
+            />
+          </section>
+        )}
+
+        {activeTab === 'management' && (
+          <section className="partners-section">
+            <div className="section-header">
+              <h2 className="heading-lg">Partner Management</h2>
+              <p className="text-secondary">Filter and analyze partner performance</p>
+            </div>
+
+            <div className="filters-container">
+              <PartnerFilters
+                filters={filters}
+                activeFilters={activeFilters}
+                onFilterChange={onFilterChange}
+              />
+            </div>
+
+            <div className="table-container">
+              <PartnerTable
+                partners={partners}
+                loading={loading}
+                onPartnerSelect={onPartnerSelect}
+                formatCurrency={formatCurrency}
+                formatNumber={formatNumber}
+                formatVolume={formatVolume}
+                getTierColor={getTierColor}
+                sortField={sortField}
+                sortDirection={sortDirection}
+                onSortChange={onSortChange}
+                activeFilters={activeFilters}
+                showPII={showPII}
+                // Pagination props
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalCount={totalCount}
+                partnersPerPage={partnersPerPage}
+                onPageChange={onPageChange}
+                mainLoading={loading}
+              />
+            </div>
+          </section>
+        )}
+      </div>
+
+      {/* AI Copilot for Dashboard Insights - Always visible */}
       <AICopilot 
         context="dashboard"
         data={{
@@ -104,7 +150,7 @@ const Dashboard = ({
           activeFilters
         }}
       />
-    </>
+    </div>
   );
 };
 

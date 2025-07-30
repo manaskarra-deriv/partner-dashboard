@@ -2,7 +2,7 @@
 const config = {
   // When running locally with proxy
   development: {
-    apiBaseUrl: '', // Use relative URLs with proxy
+    apiBaseUrl: 'http://localhost:5003', // Connect directly to backend temporarily
   },
   // When deployed via ngrok (frontend served statically, backend proxied)
   production: {
