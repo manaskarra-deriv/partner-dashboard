@@ -703,20 +703,20 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
                           <div className="summary-percentage">{summaryData.partners_percentage || '0.0'}% of global</div>
                         </div>
                         <div className="summary-card">
-                          <div className="summary-value">${formatNumber(summaryData.total_company_revenue || 0)}</div>
-                          <div className="summary-label">Deriv Revenue</div>
-                          {summaryData.revenue_rank && (
-                            <div className="summary-rank">#{summaryData.revenue_rank}</div>
-                          )}
-                          <div className="summary-percentage">{summaryData.revenue_percentage || '0.0'}% of global</div>
-                        </div>
-                        <div className="summary-card">
                           <div className="summary-value">${formatNumber(summaryData.total_partner_earnings || 0)}</div>
                           <div className="summary-label">Partner Earnings</div>
                           {summaryData.earnings_rank && (
                             <div className="summary-rank">#{summaryData.earnings_rank}</div>
                           )}
                           <div className="summary-percentage">{summaryData.earnings_percentage || '0.0'}% of global</div>
+                        </div>
+                        <div className="summary-card">
+                          <div className="summary-value">${formatNumber(summaryData.total_company_revenue || 0)}</div>
+                          <div className="summary-label">Deriv Revenue</div>
+                          {summaryData.revenue_rank && (
+                            <div className="summary-rank">#{summaryData.revenue_rank}</div>
+                          )}
+                          <div className="summary-percentage">{summaryData.revenue_percentage || '0.0'}% of global</div>
                         </div>
                         <div className="summary-card">
                           <div className={`summary-value ${getEtrClass(summaryData.etr_ratio || 0)}`}>
@@ -777,17 +777,17 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
                 return (
                       <>
                         <div className="summary-card">
-                          <div className="summary-value">${formatNumber(summaryData.avg_monthly_revenue || 0)}</div>
-                          <div className="summary-label">Avg Deriv Revenue/Month</div>
-                          {summaryData.avg_monthly_revenue_rank && (
-                            <div className="summary-rank">#{summaryData.avg_monthly_revenue_rank}</div>
-                          )}
-                        </div>
-                        <div className="summary-card">
                           <div className="summary-value">${formatNumber(summaryData.avg_monthly_earnings || 0)}</div>
                           <div className="summary-label">Avg Partner Earnings/Month</div>
                           {summaryData.avg_monthly_earnings_rank && (
                             <div className="summary-rank">#{summaryData.avg_monthly_earnings_rank}</div>
+                          )}
+                        </div>
+                        <div className="summary-card">
+                          <div className="summary-value">${formatNumber(summaryData.avg_monthly_revenue || 0)}</div>
+                          <div className="summary-label">Avg Deriv Revenue/Month</div>
+                          {summaryData.avg_monthly_revenue_rank && (
+                            <div className="summary-rank">#{summaryData.avg_monthly_revenue_rank}</div>
                           )}
                         </div>
                         <div className="summary-card">
