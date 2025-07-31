@@ -1450,6 +1450,25 @@ body {
   margin-bottom: 1rem;
 }
 
+/* Loading placeholder for summary cards */
+.loading-placeholder {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+  color: transparent !important;
+  border-radius: 4px;
+  min-height: 1.2em;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -4003,6 +4022,45 @@ body {
   margin-top: 0.25rem;
 }
 
+.summary-percentage {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  font-weight: 400;
+  margin-top: 0.25rem;
+}
+
+/* ETR Color Classes for Summary Cards */
+.summary-value.etr-critically-low {
+  color: #7c3aed !important;
+  font-weight: 600 !important;
+}
+
+.summary-value.etr-very-low {
+  color: #60a5fa !important;
+  font-weight: 600 !important;
+}
+
+.summary-value.etr-low {
+  color: #ca8a04 !important;
+  font-weight: 600 !important;
+}
+
+.summary-value.etr-fair {
+  color: #059669 !important;
+  font-weight: 600 !important;
+}
+
+.summary-value.etr-high {
+  color: #d97706 !important;
+  font-weight: 600 !important;
+}
+
+/* ETD Color Class for Summary Cards */
+.summary-value.etd-red {
+  color: #dc2626 !important;
+  font-weight: 600 !important;
+}
+
 /* Tier Tabs */
 .tier-tabs {
   display: flex;
@@ -4497,4 +4555,25 @@ body {
   margin: 0;
   font-size: 0.95rem;
   line-height: 1.5;
+}
+
+.splash-progress-bar-bg {
+  width: 100%;
+  height: 18px;
+  background: #f3f4f6;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  margin: 0 auto;
+}
+.splash-progress-bar-fill {
+  height: 100%;
+  background: var(--primary-gradient);
+  border-radius: 12px 0 0 12px;
+  transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* Splash screen logo box shadow */
+.loading-content > div[style*='background: white'] {
+  box-shadow: 0 8px 32px 0 rgba(0,0,0,0.06) !important;
 }

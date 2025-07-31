@@ -1,0 +1,5838 @@
+{
+    "client.account_profile": [
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "user_group",
+            "text"
+        ],
+        [
+            "account_type",
+            "text"
+        ],
+        [
+            "client_group",
+            "text"
+        ],
+        [
+            "is_internal",
+            "boolean"
+        ],
+        [
+            "platform",
+            "text"
+        ],
+        [
+            "date_joined",
+            "date"
+        ]
+    ],
+    "client.staging_user_profile": [
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "affiliated_partner_id",
+            "text"
+        ],
+        [
+            "client_country",
+            "text"
+        ],
+        [
+            "affiliated_partner_country",
+            "text"
+        ],
+        [
+            "demo_joined_date",
+            "date"
+        ],
+        [
+            "real_joined_date",
+            "date"
+        ],
+        [
+            "first_deposit_date",
+            "date"
+        ],
+        [
+            "first_deposit_amount_usd",
+            "double precision"
+        ],
+        [
+            "first_trade_date",
+            "date"
+        ],
+        [
+            "last_deposit_date",
+            "date"
+        ],
+        [
+            "last_trade_date",
+            "date"
+        ],
+        [
+            "is_internal",
+            "boolean"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "client_region",
+            "text"
+        ],
+        [
+            "affiliated_partner_region",
+            "text"
+        ],
+        [
+            "utm_source",
+            "text"
+        ],
+        [
+            "utm_medium",
+            "text"
+        ],
+        [
+            "utm_campaign",
+            "text"
+        ],
+        [
+            "acquisition_channel",
+            "text"
+        ],
+        [
+            "is_affiliate",
+            "boolean"
+        ],
+        [
+            "is_pa",
+            "boolean"
+        ],
+        [
+            "is_appdev",
+            "boolean"
+        ]
+    ],
+    "client.trade_daily": [
+        [
+            "date",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "platform",
+            "text"
+        ],
+        [
+            "app_id",
+            "bigint"
+        ],
+        [
+            "product_type",
+            "text"
+        ],
+        [
+            "bet_class",
+            "text"
+        ],
+        [
+            "bet_type",
+            "text"
+        ],
+        [
+            "asset_type",
+            "text"
+        ],
+        [
+            "symbol",
+            "text"
+        ],
+        [
+            "volume_usd",
+            "double precision"
+        ],
+        [
+            "contract_count",
+            "bigint"
+        ],
+        [
+            "deal_count",
+            "bigint"
+        ],
+        [
+            "deriv_total_pnl",
+            "double precision"
+        ],
+        [
+            "actual_deriv_total_pnl",
+            "double precision"
+        ],
+        [
+            "app_markup",
+            "double precision"
+        ],
+        [
+            "spread_revenue",
+            "double precision"
+        ],
+        [
+            "expected_revenue",
+            "double precision"
+        ],
+        [
+            "swap_deriv_paid",
+            "double precision"
+        ],
+        [
+            "swap_deriv_received",
+            "double precision"
+        ],
+        [
+            "actual_client_win_usd",
+            "double precision"
+        ],
+        [
+            "actual_client_lose_usd",
+            "double precision"
+        ],
+        [
+            "ib_commission_recalc",
+            "double precision"
+        ],
+        [
+            "turnover_earnings_recalc",
+            "double precision"
+        ],
+        [
+            "trade_commission",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ],
+        [
+            "market",
+            "text"
+        ],
+        [
+            "affiliated_trade",
+            "boolean"
+        ]
+    ],
+    "client.trade_daily_2025_01": [
+        [
+            "date",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "platform",
+            "text"
+        ],
+        [
+            "app_id",
+            "bigint"
+        ],
+        [
+            "product_type",
+            "text"
+        ],
+        [
+            "bet_class",
+            "text"
+        ],
+        [
+            "bet_type",
+            "text"
+        ],
+        [
+            "asset_type",
+            "text"
+        ],
+        [
+            "symbol",
+            "text"
+        ],
+        [
+            "volume_usd",
+            "double precision"
+        ],
+        [
+            "contract_count",
+            "bigint"
+        ],
+        [
+            "deal_count",
+            "bigint"
+        ],
+        [
+            "deriv_total_pnl",
+            "double precision"
+        ],
+        [
+            "actual_deriv_total_pnl",
+            "double precision"
+        ],
+        [
+            "app_markup",
+            "double precision"
+        ],
+        [
+            "spread_revenue",
+            "double precision"
+        ],
+        [
+            "expected_revenue",
+            "double precision"
+        ],
+        [
+            "swap_deriv_paid",
+            "double precision"
+        ],
+        [
+            "swap_deriv_received",
+            "double precision"
+        ],
+        [
+            "actual_client_win_usd",
+            "double precision"
+        ],
+        [
+            "actual_client_lose_usd",
+            "double precision"
+        ],
+        [
+            "ib_commission_recalc",
+            "double precision"
+        ],
+        [
+            "turnover_earnings_recalc",
+            "double precision"
+        ],
+        [
+            "trade_commission",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ],
+        [
+            "market",
+            "text"
+        ],
+        [
+            "affiliated_trade",
+            "boolean"
+        ]
+    ],
+    "client.trade_daily_2025_02": [
+        [
+            "date",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "platform",
+            "text"
+        ],
+        [
+            "app_id",
+            "bigint"
+        ],
+        [
+            "product_type",
+            "text"
+        ],
+        [
+            "bet_class",
+            "text"
+        ],
+        [
+            "bet_type",
+            "text"
+        ],
+        [
+            "asset_type",
+            "text"
+        ],
+        [
+            "symbol",
+            "text"
+        ],
+        [
+            "volume_usd",
+            "double precision"
+        ],
+        [
+            "contract_count",
+            "bigint"
+        ],
+        [
+            "deal_count",
+            "bigint"
+        ],
+        [
+            "deriv_total_pnl",
+            "double precision"
+        ],
+        [
+            "actual_deriv_total_pnl",
+            "double precision"
+        ],
+        [
+            "app_markup",
+            "double precision"
+        ],
+        [
+            "spread_revenue",
+            "double precision"
+        ],
+        [
+            "expected_revenue",
+            "double precision"
+        ],
+        [
+            "swap_deriv_paid",
+            "double precision"
+        ],
+        [
+            "swap_deriv_received",
+            "double precision"
+        ],
+        [
+            "actual_client_win_usd",
+            "double precision"
+        ],
+        [
+            "actual_client_lose_usd",
+            "double precision"
+        ],
+        [
+            "ib_commission_recalc",
+            "double precision"
+        ],
+        [
+            "turnover_earnings_recalc",
+            "double precision"
+        ],
+        [
+            "trade_commission",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ],
+        [
+            "market",
+            "text"
+        ],
+        [
+            "affiliated_trade",
+            "boolean"
+        ]
+    ],
+    "client.trade_daily_2025_03": [
+        [
+            "date",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "platform",
+            "text"
+        ],
+        [
+            "app_id",
+            "bigint"
+        ],
+        [
+            "product_type",
+            "text"
+        ],
+        [
+            "bet_class",
+            "text"
+        ],
+        [
+            "bet_type",
+            "text"
+        ],
+        [
+            "asset_type",
+            "text"
+        ],
+        [
+            "symbol",
+            "text"
+        ],
+        [
+            "volume_usd",
+            "double precision"
+        ],
+        [
+            "contract_count",
+            "bigint"
+        ],
+        [
+            "deal_count",
+            "bigint"
+        ],
+        [
+            "deriv_total_pnl",
+            "double precision"
+        ],
+        [
+            "actual_deriv_total_pnl",
+            "double precision"
+        ],
+        [
+            "app_markup",
+            "double precision"
+        ],
+        [
+            "spread_revenue",
+            "double precision"
+        ],
+        [
+            "expected_revenue",
+            "double precision"
+        ],
+        [
+            "swap_deriv_paid",
+            "double precision"
+        ],
+        [
+            "swap_deriv_received",
+            "double precision"
+        ],
+        [
+            "actual_client_win_usd",
+            "double precision"
+        ],
+        [
+            "actual_client_lose_usd",
+            "double precision"
+        ],
+        [
+            "ib_commission_recalc",
+            "double precision"
+        ],
+        [
+            "turnover_earnings_recalc",
+            "double precision"
+        ],
+        [
+            "trade_commission",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ],
+        [
+            "market",
+            "text"
+        ],
+        [
+            "affiliated_trade",
+            "boolean"
+        ]
+    ],
+    "client.trade_daily_2025_04": [
+        [
+            "date",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "platform",
+            "text"
+        ],
+        [
+            "app_id",
+            "bigint"
+        ],
+        [
+            "product_type",
+            "text"
+        ],
+        [
+            "bet_class",
+            "text"
+        ],
+        [
+            "bet_type",
+            "text"
+        ],
+        [
+            "asset_type",
+            "text"
+        ],
+        [
+            "symbol",
+            "text"
+        ],
+        [
+            "volume_usd",
+            "double precision"
+        ],
+        [
+            "contract_count",
+            "bigint"
+        ],
+        [
+            "deal_count",
+            "bigint"
+        ],
+        [
+            "deriv_total_pnl",
+            "double precision"
+        ],
+        [
+            "actual_deriv_total_pnl",
+            "double precision"
+        ],
+        [
+            "app_markup",
+            "double precision"
+        ],
+        [
+            "spread_revenue",
+            "double precision"
+        ],
+        [
+            "expected_revenue",
+            "double precision"
+        ],
+        [
+            "swap_deriv_paid",
+            "double precision"
+        ],
+        [
+            "swap_deriv_received",
+            "double precision"
+        ],
+        [
+            "actual_client_win_usd",
+            "double precision"
+        ],
+        [
+            "actual_client_lose_usd",
+            "double precision"
+        ],
+        [
+            "ib_commission_recalc",
+            "double precision"
+        ],
+        [
+            "turnover_earnings_recalc",
+            "double precision"
+        ],
+        [
+            "trade_commission",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ],
+        [
+            "market",
+            "text"
+        ],
+        [
+            "affiliated_trade",
+            "boolean"
+        ]
+    ],
+    "client.trade_daily_2025_05": [
+        [
+            "date",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "platform",
+            "text"
+        ],
+        [
+            "app_id",
+            "bigint"
+        ],
+        [
+            "product_type",
+            "text"
+        ],
+        [
+            "bet_class",
+            "text"
+        ],
+        [
+            "bet_type",
+            "text"
+        ],
+        [
+            "asset_type",
+            "text"
+        ],
+        [
+            "symbol",
+            "text"
+        ],
+        [
+            "volume_usd",
+            "double precision"
+        ],
+        [
+            "contract_count",
+            "bigint"
+        ],
+        [
+            "deal_count",
+            "bigint"
+        ],
+        [
+            "deriv_total_pnl",
+            "double precision"
+        ],
+        [
+            "actual_deriv_total_pnl",
+            "double precision"
+        ],
+        [
+            "app_markup",
+            "double precision"
+        ],
+        [
+            "spread_revenue",
+            "double precision"
+        ],
+        [
+            "expected_revenue",
+            "double precision"
+        ],
+        [
+            "swap_deriv_paid",
+            "double precision"
+        ],
+        [
+            "swap_deriv_received",
+            "double precision"
+        ],
+        [
+            "actual_client_win_usd",
+            "double precision"
+        ],
+        [
+            "actual_client_lose_usd",
+            "double precision"
+        ],
+        [
+            "ib_commission_recalc",
+            "double precision"
+        ],
+        [
+            "turnover_earnings_recalc",
+            "double precision"
+        ],
+        [
+            "trade_commission",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ],
+        [
+            "market",
+            "text"
+        ],
+        [
+            "affiliated_trade",
+            "boolean"
+        ]
+    ],
+    "client.trade_monthly": [
+        [
+            "month",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "platform",
+            "text"
+        ],
+        [
+            "app_id",
+            "bigint"
+        ],
+        [
+            "product_type",
+            "text"
+        ],
+        [
+            "bet_class",
+            "text"
+        ],
+        [
+            "market",
+            "text"
+        ],
+        [
+            "symbol",
+            "text"
+        ],
+        [
+            "volume_usd",
+            "double precision"
+        ],
+        [
+            "contract_count",
+            "bigint"
+        ],
+        [
+            "deriv_total_pnl",
+            "double precision"
+        ],
+        [
+            "actual_deriv_total_pnl",
+            "double precision"
+        ],
+        [
+            "app_markup",
+            "double precision"
+        ],
+        [
+            "spread_revenue",
+            "double precision"
+        ],
+        [
+            "expected_revenue",
+            "double precision"
+        ],
+        [
+            "swap_deriv_paid",
+            "double precision"
+        ],
+        [
+            "swap_deriv_received",
+            "double precision"
+        ],
+        [
+            "actual_client_win_usd",
+            "double precision"
+        ],
+        [
+            "actual_client_lose_usd",
+            "double precision"
+        ],
+        [
+            "ib_commission_recalc",
+            "double precision"
+        ],
+        [
+            "turnover_earnings_recalc",
+            "double precision"
+        ],
+        [
+            "trade_commission",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ],
+        [
+            "affiliated_trade",
+            "boolean"
+        ],
+        [
+            "bet_type",
+            "text"
+        ],
+        [
+            "asset_type",
+            "text"
+        ],
+        [
+            "deal_count",
+            "bigint"
+        ]
+    ],
+    "client.trade_monthly_2025_01": [
+        [
+            "month",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "platform",
+            "text"
+        ],
+        [
+            "app_id",
+            "bigint"
+        ],
+        [
+            "product_type",
+            "text"
+        ],
+        [
+            "bet_class",
+            "text"
+        ],
+        [
+            "market",
+            "text"
+        ],
+        [
+            "symbol",
+            "text"
+        ],
+        [
+            "volume_usd",
+            "double precision"
+        ],
+        [
+            "contract_count",
+            "bigint"
+        ],
+        [
+            "deriv_total_pnl",
+            "double precision"
+        ],
+        [
+            "actual_deriv_total_pnl",
+            "double precision"
+        ],
+        [
+            "app_markup",
+            "double precision"
+        ],
+        [
+            "spread_revenue",
+            "double precision"
+        ],
+        [
+            "expected_revenue",
+            "double precision"
+        ],
+        [
+            "swap_deriv_paid",
+            "double precision"
+        ],
+        [
+            "swap_deriv_received",
+            "double precision"
+        ],
+        [
+            "actual_client_win_usd",
+            "double precision"
+        ],
+        [
+            "actual_client_lose_usd",
+            "double precision"
+        ],
+        [
+            "ib_commission_recalc",
+            "double precision"
+        ],
+        [
+            "turnover_earnings_recalc",
+            "double precision"
+        ],
+        [
+            "trade_commission",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ],
+        [
+            "affiliated_trade",
+            "boolean"
+        ],
+        [
+            "bet_type",
+            "text"
+        ],
+        [
+            "asset_type",
+            "text"
+        ],
+        [
+            "deal_count",
+            "bigint"
+        ]
+    ],
+    "client.trade_monthly_2025_02": [
+        [
+            "month",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "platform",
+            "text"
+        ],
+        [
+            "app_id",
+            "bigint"
+        ],
+        [
+            "product_type",
+            "text"
+        ],
+        [
+            "bet_class",
+            "text"
+        ],
+        [
+            "market",
+            "text"
+        ],
+        [
+            "symbol",
+            "text"
+        ],
+        [
+            "volume_usd",
+            "double precision"
+        ],
+        [
+            "contract_count",
+            "bigint"
+        ],
+        [
+            "deriv_total_pnl",
+            "double precision"
+        ],
+        [
+            "actual_deriv_total_pnl",
+            "double precision"
+        ],
+        [
+            "app_markup",
+            "double precision"
+        ],
+        [
+            "spread_revenue",
+            "double precision"
+        ],
+        [
+            "expected_revenue",
+            "double precision"
+        ],
+        [
+            "swap_deriv_paid",
+            "double precision"
+        ],
+        [
+            "swap_deriv_received",
+            "double precision"
+        ],
+        [
+            "actual_client_win_usd",
+            "double precision"
+        ],
+        [
+            "actual_client_lose_usd",
+            "double precision"
+        ],
+        [
+            "ib_commission_recalc",
+            "double precision"
+        ],
+        [
+            "turnover_earnings_recalc",
+            "double precision"
+        ],
+        [
+            "trade_commission",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ],
+        [
+            "affiliated_trade",
+            "boolean"
+        ],
+        [
+            "bet_type",
+            "text"
+        ],
+        [
+            "asset_type",
+            "text"
+        ],
+        [
+            "deal_count",
+            "bigint"
+        ]
+    ],
+    "client.trade_monthly_2025_03": [
+        [
+            "month",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "platform",
+            "text"
+        ],
+        [
+            "app_id",
+            "bigint"
+        ],
+        [
+            "product_type",
+            "text"
+        ],
+        [
+            "bet_class",
+            "text"
+        ],
+        [
+            "market",
+            "text"
+        ],
+        [
+            "symbol",
+            "text"
+        ],
+        [
+            "volume_usd",
+            "double precision"
+        ],
+        [
+            "contract_count",
+            "bigint"
+        ],
+        [
+            "deriv_total_pnl",
+            "double precision"
+        ],
+        [
+            "actual_deriv_total_pnl",
+            "double precision"
+        ],
+        [
+            "app_markup",
+            "double precision"
+        ],
+        [
+            "spread_revenue",
+            "double precision"
+        ],
+        [
+            "expected_revenue",
+            "double precision"
+        ],
+        [
+            "swap_deriv_paid",
+            "double precision"
+        ],
+        [
+            "swap_deriv_received",
+            "double precision"
+        ],
+        [
+            "actual_client_win_usd",
+            "double precision"
+        ],
+        [
+            "actual_client_lose_usd",
+            "double precision"
+        ],
+        [
+            "ib_commission_recalc",
+            "double precision"
+        ],
+        [
+            "turnover_earnings_recalc",
+            "double precision"
+        ],
+        [
+            "trade_commission",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ],
+        [
+            "affiliated_trade",
+            "boolean"
+        ],
+        [
+            "bet_type",
+            "text"
+        ],
+        [
+            "asset_type",
+            "text"
+        ],
+        [
+            "deal_count",
+            "bigint"
+        ]
+    ],
+    "client.trade_monthly_2025_04": [
+        [
+            "month",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "platform",
+            "text"
+        ],
+        [
+            "app_id",
+            "bigint"
+        ],
+        [
+            "product_type",
+            "text"
+        ],
+        [
+            "bet_class",
+            "text"
+        ],
+        [
+            "market",
+            "text"
+        ],
+        [
+            "symbol",
+            "text"
+        ],
+        [
+            "volume_usd",
+            "double precision"
+        ],
+        [
+            "contract_count",
+            "bigint"
+        ],
+        [
+            "deriv_total_pnl",
+            "double precision"
+        ],
+        [
+            "actual_deriv_total_pnl",
+            "double precision"
+        ],
+        [
+            "app_markup",
+            "double precision"
+        ],
+        [
+            "spread_revenue",
+            "double precision"
+        ],
+        [
+            "expected_revenue",
+            "double precision"
+        ],
+        [
+            "swap_deriv_paid",
+            "double precision"
+        ],
+        [
+            "swap_deriv_received",
+            "double precision"
+        ],
+        [
+            "actual_client_win_usd",
+            "double precision"
+        ],
+        [
+            "actual_client_lose_usd",
+            "double precision"
+        ],
+        [
+            "ib_commission_recalc",
+            "double precision"
+        ],
+        [
+            "turnover_earnings_recalc",
+            "double precision"
+        ],
+        [
+            "trade_commission",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ],
+        [
+            "affiliated_trade",
+            "boolean"
+        ],
+        [
+            "bet_type",
+            "text"
+        ],
+        [
+            "asset_type",
+            "text"
+        ],
+        [
+            "deal_count",
+            "bigint"
+        ]
+    ],
+    "client.trade_monthly_2025_05": [
+        [
+            "month",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "platform",
+            "text"
+        ],
+        [
+            "app_id",
+            "bigint"
+        ],
+        [
+            "product_type",
+            "text"
+        ],
+        [
+            "bet_class",
+            "text"
+        ],
+        [
+            "market",
+            "text"
+        ],
+        [
+            "symbol",
+            "text"
+        ],
+        [
+            "volume_usd",
+            "double precision"
+        ],
+        [
+            "contract_count",
+            "bigint"
+        ],
+        [
+            "deriv_total_pnl",
+            "double precision"
+        ],
+        [
+            "actual_deriv_total_pnl",
+            "double precision"
+        ],
+        [
+            "app_markup",
+            "double precision"
+        ],
+        [
+            "spread_revenue",
+            "double precision"
+        ],
+        [
+            "expected_revenue",
+            "double precision"
+        ],
+        [
+            "swap_deriv_paid",
+            "double precision"
+        ],
+        [
+            "swap_deriv_received",
+            "double precision"
+        ],
+        [
+            "actual_client_win_usd",
+            "double precision"
+        ],
+        [
+            "actual_client_lose_usd",
+            "double precision"
+        ],
+        [
+            "ib_commission_recalc",
+            "double precision"
+        ],
+        [
+            "turnover_earnings_recalc",
+            "double precision"
+        ],
+        [
+            "trade_commission",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ],
+        [
+            "affiliated_trade",
+            "boolean"
+        ],
+        [
+            "bet_type",
+            "text"
+        ],
+        [
+            "asset_type",
+            "text"
+        ],
+        [
+            "deal_count",
+            "bigint"
+        ]
+    ],
+    "client.transaction_daily": [
+        [
+            "transaction_date",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_daily_2024_01": [
+        [
+            "transaction_date",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_daily_2024_02": [
+        [
+            "transaction_date",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_daily_2024_03": [
+        [
+            "transaction_date",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_daily_2024_04": [
+        [
+            "transaction_date",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_daily_2024_05": [
+        [
+            "transaction_date",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_daily_2024_06": [
+        [
+            "transaction_date",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_daily_2024_07": [
+        [
+            "transaction_date",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_daily_2024_08": [
+        [
+            "transaction_date",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_daily_2024_09": [
+        [
+            "transaction_date",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_daily_2024_10": [
+        [
+            "transaction_date",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_daily_2024_11": [
+        [
+            "transaction_date",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_daily_2024_12": [
+        [
+            "transaction_date",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_daily_2025_01": [
+        [
+            "transaction_date",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_daily_2025_02": [
+        [
+            "transaction_date",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_daily_2025_03": [
+        [
+            "transaction_date",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_daily_2025_04": [
+        [
+            "transaction_date",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_daily_2025_05": [
+        [
+            "transaction_date",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_monthly": [
+        [
+            "transaction_month",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_monthly_2024_01": [
+        [
+            "transaction_month",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_monthly_2024_02": [
+        [
+            "transaction_month",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_monthly_2024_03": [
+        [
+            "transaction_month",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_monthly_2024_04": [
+        [
+            "transaction_month",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_monthly_2024_05": [
+        [
+            "transaction_month",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_monthly_2024_06": [
+        [
+            "transaction_month",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_monthly_2024_07": [
+        [
+            "transaction_month",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_monthly_2024_08": [
+        [
+            "transaction_month",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_monthly_2024_09": [
+        [
+            "transaction_month",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_monthly_2024_10": [
+        [
+            "transaction_month",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_monthly_2024_11": [
+        [
+            "transaction_month",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_monthly_2024_12": [
+        [
+            "transaction_month",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_monthly_2025_01": [
+        [
+            "transaction_month",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_monthly_2025_02": [
+        [
+            "transaction_month",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_monthly_2025_03": [
+        [
+            "transaction_month",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_monthly_2025_04": [
+        [
+            "transaction_month",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.transaction_monthly_2025_05": [
+        [
+            "transaction_month",
+            "date"
+        ],
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "login_id",
+            "text"
+        ],
+        [
+            "affiliated_transaction",
+            "boolean"
+        ],
+        [
+            "direct_deposit_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "deposit_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_deposit",
+            "double precision"
+        ],
+        [
+            "direct_withdrawal_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_pa_usd",
+            "double precision"
+        ],
+        [
+            "withdrawal_via_p2p_usd",
+            "double precision"
+        ],
+        [
+            "total_withdrawal",
+            "double precision"
+        ]
+    ],
+    "client.user_profile": [
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "affiliated_partner_id",
+            "text"
+        ],
+        [
+            "client_country",
+            "text"
+        ],
+        [
+            "affiliated_partner_country",
+            "text"
+        ],
+        [
+            "demo_joined_date",
+            "date"
+        ],
+        [
+            "real_joined_date",
+            "date"
+        ],
+        [
+            "first_deposit_date",
+            "date"
+        ],
+        [
+            "first_deposit_amount_usd",
+            "double precision"
+        ],
+        [
+            "first_trade_date",
+            "date"
+        ],
+        [
+            "last_deposit_date",
+            "date"
+        ],
+        [
+            "last_trade_date",
+            "date"
+        ],
+        [
+            "is_internal",
+            "boolean"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "client_region",
+            "text"
+        ],
+        [
+            "affiliated_partner_region",
+            "text"
+        ],
+        [
+            "utm_source",
+            "text"
+        ],
+        [
+            "utm_medium",
+            "text"
+        ],
+        [
+            "utm_campaign",
+            "text"
+        ],
+        [
+            "acquisition_channel",
+            "text"
+        ],
+        [
+            "is_affiliate",
+            "boolean"
+        ],
+        [
+            "is_pa",
+            "boolean"
+        ],
+        [
+            "is_appdev",
+            "boolean"
+        ]
+    ],
+    "client.user_profile_test": [
+        [
+            "binary_user_id",
+            "bigint"
+        ],
+        [
+            "affiliated_partner_id",
+            "text"
+        ],
+        [
+            "client_country",
+            "text"
+        ],
+        [
+            "affiliated_partner_country",
+            "text"
+        ],
+        [
+            "demo_joined_date",
+            "date"
+        ],
+        [
+            "real_joined_date",
+            "date"
+        ],
+        [
+            "first_deposit_date",
+            "date"
+        ],
+        [
+            "first_deposit_amount_usd",
+            "double precision"
+        ],
+        [
+            "first_trade_date",
+            "date"
+        ],
+        [
+            "last_deposit_date",
+            "date"
+        ],
+        [
+            "last_trade_date",
+            "date"
+        ],
+        [
+            "is_internal",
+            "boolean"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "client_region",
+            "text"
+        ],
+        [
+            "affiliated_partner_region",
+            "text"
+        ],
+        [
+            "utm_source",
+            "text"
+        ],
+        [
+            "utm_medium",
+            "text"
+        ],
+        [
+            "utm_campaign",
+            "text"
+        ],
+        [
+            "acquisition_channel",
+            "text"
+        ],
+        [
+            "is_affiliate",
+            "boolean"
+        ],
+        [
+            "is_pa",
+            "boolean"
+        ],
+        [
+            "is_appdev",
+            "boolean"
+        ]
+    ],
+    "partner.commission_daily": [
+        [
+            "report_date",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_daily_2024_01": [
+        [
+            "report_date",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_daily_2024_02": [
+        [
+            "report_date",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_daily_2024_03": [
+        [
+            "report_date",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_daily_2024_04": [
+        [
+            "report_date",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_daily_2024_05": [
+        [
+            "report_date",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_daily_2024_06": [
+        [
+            "report_date",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_daily_2024_07": [
+        [
+            "report_date",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_daily_2024_08": [
+        [
+            "report_date",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_daily_2024_09": [
+        [
+            "report_date",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_daily_2024_10": [
+        [
+            "report_date",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_daily_2024_11": [
+        [
+            "report_date",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_daily_2024_12": [
+        [
+            "report_date",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_daily_2025_01": [
+        [
+            "report_date",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_daily_2025_02": [
+        [
+            "report_date",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_daily_2025_03": [
+        [
+            "report_date",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_daily_2025_04": [
+        [
+            "report_date",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_daily_2025_05": [
+        [
+            "report_date",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_daily_2025_06": [
+        [
+            "report_date",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_monthly": [
+        [
+            "month",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_monthly_2024_01": [
+        [
+            "month",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_monthly_2024_02": [
+        [
+            "month",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_monthly_2024_03": [
+        [
+            "month",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_monthly_2024_04": [
+        [
+            "month",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_monthly_2024_05": [
+        [
+            "month",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_monthly_2024_06": [
+        [
+            "month",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_monthly_2024_07": [
+        [
+            "month",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_monthly_2024_08": [
+        [
+            "month",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_monthly_2024_09": [
+        [
+            "month",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_monthly_2024_10": [
+        [
+            "month",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_monthly_2024_11": [
+        [
+            "month",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_monthly_2024_12": [
+        [
+            "month",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_monthly_2025_01": [
+        [
+            "month",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_monthly_2025_02": [
+        [
+            "month",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_monthly_2025_03": [
+        [
+            "month",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_monthly_2025_04": [
+        [
+            "month",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.commission_monthly_2025_05": [
+        [
+            "month",
+            "date"
+        ],
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "total_earnings",
+            "double precision"
+        ],
+        [
+            "mt5_ib_earnings",
+            "double precision"
+        ],
+        [
+            "derivx_ib_earnings",
+            "double precision"
+        ],
+        [
+            "ctrader_ib_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "developer_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "uuid",
+            "uuid"
+        ]
+    ],
+    "partner.partner_info": [
+        [
+            "partner_id",
+            "text"
+        ],
+        [
+            "parent_partner_id",
+            "text"
+        ],
+        [
+            "partner_binary_user_id",
+            "bigint"
+        ],
+        [
+            "mt5_ib_account",
+            "bigint"
+        ],
+        [
+            "date_joined",
+            "date"
+        ],
+        [
+            "partner_platform",
+            "text"
+        ],
+        [
+            "partner_status",
+            "text"
+        ],
+        [
+            "aff_type",
+            "text"
+        ],
+        [
+            "partner_level",
+            "integer"
+        ],
+        [
+            "partner_region",
+            "text"
+        ],
+        [
+            "partner_country",
+            "text"
+        ],
+        [
+            "first_client_joined_date",
+            "date"
+        ],
+        [
+            "first_client_deposit_date",
+            "date"
+        ],
+        [
+            "first_client_trade_date",
+            "date"
+        ],
+        [
+            "first_earning_date",
+            "date"
+        ],
+        [
+            "last_client_joined_date",
+            "date"
+        ],
+        [
+            "last_client_deposit_date",
+            "date"
+        ],
+        [
+            "last_client_trade_date",
+            "date"
+        ],
+        [
+            "last_earning_date",
+            "date"
+        ],
+        [
+            "subaff_count",
+            "integer"
+        ],
+        [
+            "turnover_client_bui",
+            "integer"
+        ],
+        [
+            "revshare_client_bui",
+            "integer"
+        ],
+        [
+            "cpa_client_bui",
+            "integer"
+        ],
+        [
+            "subaffiliate_earnings",
+            "double precision"
+        ],
+        [
+            "turnover_earnings",
+            "double precision"
+        ],
+        [
+            "revenue_share_earnings",
+            "double precision"
+        ],
+        [
+            "ib_earnings",
+            "double precision"
+        ],
+        [
+            "cpa_deposit_earnings",
+            "double precision"
+        ],
+        [
+            "earning_acquisition",
+            "text"
+        ],
+        [
+            "webinar_count",
+            "integer"
+        ],
+        [
+            "seminar_count",
+            "integer"
+        ],
+        [
+            "sponsorship_event_count",
+            "integer"
+        ],
+        [
+            "deriv_van_count",
+            "integer"
+        ],
+        [
+            "conference_count",
+            "integer"
+        ],
+        [
+            "attended_onboarding_event",
+            "boolean"
+        ],
+        [
+            "is_internal",
+            "boolean"
+        ],
+        [
+            "is_revshare_plan",
+            "boolean"
+        ],
+        [
+            "is_turnover_plan",
+            "boolean"
+        ],
+        [
+            "is_cpa_plan",
+            "boolean"
+        ],
+        [
+            "is_master_plan",
+            "boolean"
+        ],
+        [
+            "is_ib_plan",
+            "boolean"
+        ],
+        [
+            "is_app_dev",
+            "boolean"
+        ],
+        [
+            "is_pa",
+            "boolean"
+        ],
+        [
+            "first_event_joined_date",
+            "date"
+        ],
+        [
+            "last_event_joined_date",
+            "date"
+        ],
+        [
+            "source_partner",
+            "text"
+        ],
+        [
+            "downline_subaff_count",
+            "bigint"
+        ],
+        [
+            "downline_client_bui",
+            "bigint"
+        ],
+        [
+            "partner_first_trade_date",
+            "date"
+        ],
+        [
+            "partner_last_trade_date",
+            "date"
+        ],
+        [
+            "is_partner_active",
+            "boolean"
+        ],
+        [
+            "is_partner_traded",
+            "boolean"
+        ],
+        [
+            "last_partner_active_date",
+            "date"
+        ],
+        [
+            "activation_phase",
+            "text"
+        ]
+    ]
+}

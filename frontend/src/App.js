@@ -8,6 +8,7 @@ import './App.css';
 import Dashboard from './components/Dashboard';
 import PartnerDetailPage from './components/PartnerDetailPage';
 import LoadingScreen from './components/LoadingScreen';
+import ApplicationFunnel from './components/ApplicationFunnel';
 
 function App() {
   const navigate = useNavigate();
@@ -29,17 +30,35 @@ function App() {
   const partnersPerPage = 30;
   
   // PII Privacy state
-  const [showPII, setShowPII] = useState(true);
+  const [showPII, setShowPII] = useState(false);
 
   // Check if we're on a partner detail page
   const isPartnerDetailPage = location.pathname.startsWith('/partner/');
 
-  // Fetch initial data
+  // Loading states for different modules
+  const [overviewLoading, setOverviewLoading] = useState(true);
+  const [funnelLoading, setFunnelLoading] = useState(true);
+  const [partnerMgmtLoading, setPartnerMgmtLoading] = useState(true);
+  const [funnelData, setFunnelData] = useState(null);
+  const [availableCountries, setAvailableCountries] = useState([]);
+  const [availableRegions, setAvailableRegions] = useState([]);
+  const [funnelInitialLoading, setFunnelInitialLoading] = useState(true);
+
+  // Fetch all three modules in parallel on mount
   useEffect(() => {
     fetchOverview();
     fetchPartners(activeFilters, 1);
     fetchFilters();
     fetchTierAnalytics();
+    // Simulate Partner Management loading
+    setPartnerMgmtLoading(true);
+    setTimeout(() => setPartnerMgmtLoading(false), 1200);
+    // Fetch Application Funnel initial data
+    setFunnelInitialLoading(true);
+    Promise.all([
+      fetchInitialFunnelData(),
+      fetchAvailableCountriesAndRegions()
+    ]).then(() => setFunnelInitialLoading(false));
   }, []);
 
   // Handle scroll restoration when returning from partner detail
@@ -84,12 +103,15 @@ function App() {
   }, [sortField, sortDirection]);
 
   const fetchOverview = async () => {
+    setOverviewLoading(true);
     try {
       const response = await axios.get(`${API_BASE_URL}/api/partner-overview`);
       setOverview(response.data);
     } catch (err) {
       console.error('Error fetching overview:', err);
       setError('Failed to load partner overview');
+    } finally {
+      setOverviewLoading(false);
     }
   };
 
@@ -126,6 +148,7 @@ function App() {
   };
 
   const fetchTierAnalytics = async () => {
+    setFunnelLoading(true);
     try {
       // Add cache busting parameter to ensure fresh data
       const cacheBuster = `?t=${Date.now()}`;
@@ -133,8 +156,43 @@ function App() {
       setTierAnalytics(response.data);
     } catch (err) {
       console.error('Error fetching tier analytics:', err);
+      setError('Failed to load application funnel');
+    } finally {
+      setFunnelLoading(false);
     }
   };
+
+  // Fetch initial funnel data
+  const fetchInitialFunnelData = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/partner-application-funnel`);
+      setFunnelData(response.data);
+    } catch (err) {
+      // Optionally handle error
+    }
+  };
+
+  // Fetch available countries and regions
+  const fetchAvailableCountriesAndRegions = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/partner-application-countries`);
+      setAvailableCountries(response.data.countries || []);
+      // Optionally fetch regions if needed (simulate for now)
+      setAvailableRegions(response.data.regions || []);
+    } catch (err) {
+      // Optionally handle error
+    }
+  };
+
+  // Progress calculation for splash
+  const modulesLoaded = [!overviewLoading, !funnelLoading, !partnerMgmtLoading, !funnelInitialLoading].filter(Boolean).length;
+  const progress = Math.round((modulesLoaded / 4) * 100);
+  const allLoaded = modulesLoaded === 4;
+
+  // Show splash screen with progress bar until all loaded
+  if (!allLoaded) {
+    return <LoadingScreen fullscreen progress={progress} />;
+  }
 
   const handleFilterChange = (newFilters) => {
     // Don't change scroll position when filters change - keep user where they are
@@ -317,11 +375,6 @@ function App() {
     );
   }
 
-  // Show main loading screen during initial data fetch
-  if (loading && (!overview || !tierAnalytics || partners.length === 0)) {
-    return <LoadingScreen fullscreen />;
-  }
-
   return (
     <div className="app-container">
       {/* Header */}
@@ -343,7 +396,18 @@ function App() {
           <div className="header-right">
             <button 
               className={`pii-toggle ${showPII ? 'pii-visible' : 'pii-hidden'}`}
-              onClick={() => setShowPII(!showPII)}
+              onClick={() => {
+                if (!showPII) {
+                  const pwd = window.prompt('Enter password to show PII:');
+                  if (pwd === process.env.REACT_APP_PII_PASSWORD) {
+                    setShowPII(true);
+                  } else if (pwd !== null) {
+                    window.alert('Incorrect password.');
+                  }
+                } else {
+                  setShowPII(false);
+                }
+              }}
               title={showPII ? 'Hide PII Data' : 'Show PII Data'}
             >
               <span className="pii-icon">{showPII ? '👁️' : '🔒'}</span>
@@ -380,6 +444,9 @@ function App() {
               totalCount={totalCount}
               partnersPerPage={partnersPerPage}
               onPageChange={handlePageChange}
+              funnelData={funnelData}
+              availableCountries={availableCountries}
+              availableRegions={availableRegions}
             />
           } />
           <Route path="/partner/:partnerId" element={

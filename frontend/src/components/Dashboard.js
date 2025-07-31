@@ -28,7 +28,10 @@ const Dashboard = ({
   totalPages,
   totalCount,
   partnersPerPage,
-  onPageChange
+  onPageChange,
+  funnelData,
+  availableCountries,
+  availableRegions
 }) => {
   const [activeTab, setActiveTab] = useState('overview');
   return (
@@ -95,6 +98,9 @@ const Dashboard = ({
               formatNumber={formatNumber}
               getTierColor={getTierColor}
               mainLoading={loading}
+              funnelData={funnelData}
+              availableCountries={availableCountries}
+              availableRegions={availableRegions}
             />
           </section>
         )}

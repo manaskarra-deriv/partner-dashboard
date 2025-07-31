@@ -460,16 +460,16 @@ class SupabaseDB:
                 COUNT(DISTINCT CASE WHEN first_earning_date IS NOT NULL THEN partner_id END) as earning_activated,
                 COUNT(DISTINCT CASE WHEN parent_partner_id IS NOT NULL THEN partner_id END) as sub_partners,
                 COUNT(DISTINCT CASE WHEN parent_partner_id IS NULL THEN partner_id END) as direct_partners,
-                ROUND(AVG(
+                ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (
                     CASE WHEN first_client_joined_date IS NOT NULL 
                     THEN (first_client_joined_date - date_joined)
                     END
-                ), 1) as avg_days_to_first_client,
-                ROUND(AVG(
+                ))::NUMERIC, 1) as avg_days_to_first_client,
+                ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (
                     CASE WHEN first_earning_date IS NOT NULL 
                     THEN (first_earning_date - date_joined)
                     END
-                ), 1) as avg_days_to_first_earning
+                ))::NUMERIC, 1) as avg_days_to_first_earning
             FROM partner.partner_info
             WHERE date_joined IS NOT NULL
                 AND is_internal = FALSE
@@ -517,16 +517,16 @@ class SupabaseDB:
                     (COUNT(DISTINCT CASE WHEN first_earning_date IS NOT NULL THEN partner_id END)::numeric / 
                      NULLIF(COUNT(DISTINCT partner_id), 0)) * 100, 1
                 ) as earning_activation_rate,
-                ROUND(AVG(
+                ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (
                     CASE WHEN first_client_joined_date IS NOT NULL 
                     THEN (first_client_joined_date - date_joined)
                     END
-                ), 1) as avg_days_to_first_client,
-                ROUND(AVG(
+                ))::NUMERIC, 1) as avg_days_to_first_client,
+                ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (
                     CASE WHEN first_earning_date IS NOT NULL 
                     THEN (first_earning_date - date_joined)
                     END
-                ), 1) as avg_days_to_first_earning
+                ))::NUMERIC, 1) as avg_days_to_first_earning
             FROM partner.partner_info
             WHERE date_joined IS NOT NULL
                 AND is_internal = FALSE
@@ -557,16 +557,16 @@ class SupabaseDB:
                     (COUNT(DISTINCT CASE WHEN first_earning_date IS NOT NULL THEN partner_id END)::numeric / 
                      NULLIF(COUNT(DISTINCT partner_id), 0)) * 100, 1
                 ) as earning_activation_rate,
-                ROUND(AVG(
+                ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (
                     CASE WHEN first_client_joined_date IS NOT NULL 
                     THEN (first_client_joined_date - date_joined)
                     END
-                ), 1) as avg_days_to_first_client,
-                ROUND(AVG(
+                ))::NUMERIC, 1) as avg_days_to_first_client,
+                ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (
                     CASE WHEN first_earning_date IS NOT NULL 
                     THEN (first_earning_date - date_joined)
                     END
-                ), 1) as avg_days_to_first_earning
+                ))::NUMERIC, 1) as avg_days_to_first_earning
             FROM partner.partner_info
             WHERE date_joined IS NOT NULL
                 AND is_internal = FALSE
@@ -596,16 +596,16 @@ class SupabaseDB:
                     (COUNT(DISTINCT CASE WHEN first_earning_date IS NOT NULL THEN partner_id END)::numeric / 
                      NULLIF(COUNT(DISTINCT partner_id), 0)) * 100, 1
                 ) as earning_activation_rate,
-                ROUND(AVG(
+                ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (
                     CASE WHEN first_client_joined_date IS NOT NULL 
                     THEN (first_client_joined_date - date_joined)
                     END
-                ), 1) as avg_days_to_first_client,
-                ROUND(AVG(
+                ))::NUMERIC, 1) as avg_days_to_first_client,
+                ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (
                     CASE WHEN first_earning_date IS NOT NULL 
                     THEN (first_earning_date - date_joined)
                     END
-                ), 1) as avg_days_to_first_earning
+                ))::NUMERIC, 1) as avg_days_to_first_earning
             FROM partner.partner_info
             WHERE date_joined IS NOT NULL
                 AND is_internal = FALSE
@@ -1148,16 +1148,16 @@ class SupabaseDB:
                     COUNT(DISTINCT CASE WHEN pi.first_client_joined_date IS NOT NULL THEN pi.partner_id END) as client_activated,
                     COUNT(DISTINCT CASE WHEN pi.first_earning_date IS NOT NULL THEN pi.partner_id END) as earning_activated,
                     COUNT(DISTINCT CASE WHEN pi.parent_partner_id IS NOT NULL THEN pi.partner_id END) as sub_partners,
-                    ROUND(AVG(
+                    ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (
                         CASE WHEN pi.first_client_joined_date IS NOT NULL 
                         THEN (pi.first_client_joined_date - pi.date_joined)
                         END
-                    ), 1) as avg_days_to_first_client,
-                    ROUND(AVG(
+                    ))::NUMERIC, 1) as avg_days_to_first_client,
+                    ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (
                         CASE WHEN pi.first_earning_date IS NOT NULL 
                         THEN (pi.first_earning_date - pi.date_joined)
                         END
-                    ), 1) as avg_days_to_first_earning
+                    ))::NUMERIC, 1) as avg_days_to_first_earning
                 FROM partner.partner_info pi
                 WHERE pi.is_internal = FALSE
                     AND pi.date_joined >= CURRENT_DATE - INTERVAL '12 months'
