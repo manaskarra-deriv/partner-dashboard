@@ -1139,65 +1139,128 @@ class SupabaseDB:
                 filter_condition = "AND pi.partner_region = %s"
                 filter_params.append(region)
             
-            # Get monthly data with rankings
-            query = f"""
-            WITH monthly_data AS (
-                SELECT 
-                    DATE_TRUNC('month', pi.date_joined)::date as application_month,
-                    COUNT(DISTINCT pi.partner_id) as total_applications,
-                    COUNT(DISTINCT CASE WHEN pi.first_client_joined_date IS NOT NULL THEN pi.partner_id END) as client_activated,
-                    COUNT(DISTINCT CASE WHEN pi.first_earning_date IS NOT NULL THEN pi.partner_id END) as earning_activated,
-                    COUNT(DISTINCT CASE WHEN pi.parent_partner_id IS NOT NULL THEN pi.partner_id END) as sub_partners,
-                    ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (
-                        CASE WHEN pi.first_client_joined_date IS NOT NULL 
-                        THEN (pi.first_client_joined_date - pi.date_joined)
-                        END
-                    ))::NUMERIC, 1) as avg_days_to_first_client,
-                    ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (
-                        CASE WHEN pi.first_earning_date IS NOT NULL 
-                        THEN (pi.first_earning_date - pi.date_joined)
-                        END
-                    ))::NUMERIC, 1) as avg_days_to_first_earning
-                FROM partner.partner_info pi
-                WHERE pi.is_internal = FALSE
-                    AND pi.date_joined >= CURRENT_DATE - INTERVAL '12 months'
-                    {filter_condition}
-                GROUP BY DATE_TRUNC('month', pi.date_joined)::date
-            ),
-            all_countries_monthly AS (
-                SELECT 
-                    pi.partner_country,
-                    DATE_TRUNC('month', pi.date_joined)::date as application_month,
-                    COUNT(DISTINCT pi.partner_id) as applications
-                FROM partner.partner_info pi
-                WHERE pi.is_internal = FALSE
-                    AND pi.date_joined >= CURRENT_DATE - INTERVAL '12 months'
-                    AND pi.partner_country IS NOT NULL
-                GROUP BY pi.partner_country, DATE_TRUNC('month', pi.date_joined)::date
-            ),
-            ranked_countries AS (
-                SELECT *,
-                    ROW_NUMBER() OVER (PARTITION BY application_month ORDER BY applications DESC) as rank
-                FROM all_countries_monthly
-            )
-            SELECT 
-                md.application_month,
-                md.total_applications,
-                md.client_activated,
-                md.earning_activated,
-                md.sub_partners,
-                md.avg_days_to_first_client,
-                md.avg_days_to_first_earning,
-                COALESCE(rc.rank, 0) as country_rank
-            FROM monthly_data md
-            LEFT JOIN ranked_countries rc ON md.application_month = rc.application_month
-            """
-            
+            # Get monthly data with rankings - fixed for regions
             if country:
-                query += " AND rc.partner_country = %s"
-                filter_params.append(country)
-            
-            query += " ORDER BY md.application_month DESC"
+                # For countries: original logic
+                query = f"""
+                WITH monthly_data AS (
+                    SELECT 
+                        DATE_TRUNC('month', pi.date_joined)::date as application_month,
+                        COUNT(DISTINCT pi.partner_id) as total_applications,
+                        COUNT(DISTINCT CASE WHEN pi.first_client_joined_date IS NOT NULL THEN pi.partner_id END) as client_activated,
+                        COUNT(DISTINCT CASE WHEN pi.first_earning_date IS NOT NULL THEN pi.partner_id END) as earning_activated,
+                        COUNT(DISTINCT CASE WHEN pi.parent_partner_id IS NOT NULL THEN pi.partner_id END) as sub_partners,
+                        ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (
+                            CASE WHEN pi.first_client_joined_date IS NOT NULL 
+                            THEN (pi.first_client_joined_date - pi.date_joined)
+                            END
+                        ))::NUMERIC, 1) as avg_days_to_first_client,
+                        ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (
+                            CASE WHEN pi.first_earning_date IS NOT NULL 
+                            THEN (pi.first_earning_date - pi.date_joined)
+                            END
+                        ))::NUMERIC, 1) as avg_days_to_first_earning
+                    FROM partner.partner_info pi
+                    WHERE pi.is_internal = FALSE
+                        AND pi.date_joined >= CURRENT_DATE - INTERVAL '12 months'
+                        AND pi.partner_country = %s
+                    GROUP BY DATE_TRUNC('month', pi.date_joined)::date
+                ),
+                all_countries_monthly AS (
+                    SELECT 
+                        pi.partner_country,
+                        DATE_TRUNC('month', pi.date_joined)::date as application_month,
+                        COUNT(DISTINCT pi.partner_id) as applications
+                    FROM partner.partner_info pi
+                    WHERE pi.is_internal = FALSE
+                        AND pi.date_joined >= CURRENT_DATE - INTERVAL '12 months'
+                        AND pi.partner_country IS NOT NULL
+                    GROUP BY pi.partner_country, DATE_TRUNC('month', pi.date_joined)::date
+                ),
+                ranked_countries AS (
+                    SELECT *,
+                        ROW_NUMBER() OVER (PARTITION BY application_month ORDER BY applications DESC) as rank
+                    FROM all_countries_monthly
+                )
+                SELECT 
+                    md.application_month,
+                    md.total_applications,
+                    md.client_activated,
+                    md.earning_activated,
+                    md.sub_partners,
+                    md.avg_days_to_first_client,
+                    md.avg_days_to_first_earning,
+                    COALESCE(rc.rank, 0) as country_rank
+                FROM monthly_data md
+                LEFT JOIN ranked_countries rc ON md.application_month = rc.application_month 
+                    AND rc.partner_country = %s
+                ORDER BY md.application_month DESC
+                """
+                filter_params = [country, country]
+            else:
+                # For regions: aggregate countries within region and rank against other regions
+                query = f"""
+                WITH region_countries AS (
+                    SELECT DISTINCT partner_country
+                    FROM partner.partner_info
+                    WHERE partner_region = %s
+                        AND partner_country IS NOT NULL
+                        AND partner_country != ''
+                ),
+                monthly_data AS (
+                    SELECT 
+                        DATE_TRUNC('month', pi.date_joined)::date as application_month,
+                        COUNT(DISTINCT pi.partner_id) as total_applications,
+                        COUNT(DISTINCT CASE WHEN pi.first_client_joined_date IS NOT NULL THEN pi.partner_id END) as client_activated,
+                        COUNT(DISTINCT CASE WHEN pi.first_earning_date IS NOT NULL THEN pi.partner_id END) as earning_activated,
+                        COUNT(DISTINCT CASE WHEN pi.parent_partner_id IS NOT NULL THEN pi.partner_id END) as sub_partners,
+                        ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (
+                            CASE WHEN pi.first_client_joined_date IS NOT NULL 
+                            THEN (pi.first_client_joined_date - pi.date_joined)
+                            END
+                        ))::NUMERIC, 1) as avg_days_to_first_client,
+                        ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (
+                            CASE WHEN pi.first_earning_date IS NOT NULL 
+                            THEN (pi.first_earning_date - pi.date_joined)
+                            END
+                        ))::NUMERIC, 1) as avg_days_to_first_earning
+                    FROM partner.partner_info pi
+                    INNER JOIN region_countries rc ON pi.partner_country = rc.partner_country
+                    WHERE pi.is_internal = FALSE
+                        AND pi.date_joined >= CURRENT_DATE - INTERVAL '12 months'
+                    GROUP BY DATE_TRUNC('month', pi.date_joined)::date
+                ),
+                all_regions_monthly AS (
+                    SELECT 
+                        pi.partner_region,
+                        DATE_TRUNC('month', pi.date_joined)::date as application_month,
+                        COUNT(DISTINCT pi.partner_id) as applications
+                    FROM partner.partner_info pi
+                    WHERE pi.is_internal = FALSE
+                        AND pi.date_joined >= CURRENT_DATE - INTERVAL '12 months'
+                        AND pi.partner_region IS NOT NULL
+                    GROUP BY pi.partner_region, DATE_TRUNC('month', pi.date_joined)::date
+                ),
+                ranked_regions AS (
+                    SELECT *,
+                        ROW_NUMBER() OVER (PARTITION BY application_month ORDER BY applications DESC) as rank
+                    FROM all_regions_monthly
+                )
+                SELECT 
+                    md.application_month,
+                    md.total_applications,
+                    md.client_activated,
+                    md.earning_activated,
+                    md.sub_partners,
+                    md.avg_days_to_first_client,
+                    md.avg_days_to_first_earning,
+                    COALESCE(rr.rank, 0) as country_rank
+                FROM monthly_data md
+                LEFT JOIN ranked_regions rr ON md.application_month = rr.application_month 
+                    AND rr.partner_region = %s
+                ORDER BY md.application_month DESC
+                """
+                filter_params = [region, region]
             
             results = self.execute_query(query, filter_params)
             

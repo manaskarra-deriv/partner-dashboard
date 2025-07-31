@@ -32,6 +32,11 @@ function App() {
   // PII Privacy state
   const [showPII, setShowPII] = useState(false);
 
+  // Add state for password modal
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+
   // Check if we're on a partner detail page
   const isPartnerDetailPage = location.pathname.startsWith('/partner/');
 
@@ -43,6 +48,9 @@ function App() {
   const [availableCountries, setAvailableCountries] = useState([]);
   const [availableRegions, setAvailableRegions] = useState([]);
   const [funnelInitialLoading, setFunnelInitialLoading] = useState(true);
+
+  // Add state for active tab
+  const [activeTab, setActiveTab] = useState('overview');
 
   // Fetch all three modules in parallel on mount
   useEffect(() => {
@@ -65,13 +73,14 @@ function App() {
   useEffect(() => {
     // Check if we're returning from partner detail with saved state
     if (location.pathname === '/' && location.state?.scrollPosition !== undefined) {
-      const { scrollPosition, savedFilters, savedPage, savedSortField, savedSortDirection } = location.state;
+      const { scrollPosition, savedFilters, savedPage, savedSortField, savedSortDirection, savedTab } = location.state;
       
       // Restore state if it was passed
       if (savedFilters) setActiveFilters(savedFilters);
       if (savedPage) setCurrentPage(savedPage);
       if (savedSortField) setSortField(savedSortField);
       if (savedSortDirection) setSortDirection(savedSortDirection);
+      if (savedTab) setActiveTab(savedTab); // Restore the tab
       
       // Refetch data with restored state
       if (savedFilters !== undefined && savedPage !== undefined) {
@@ -175,10 +184,13 @@ function App() {
   // Fetch available countries and regions
   const fetchAvailableCountriesAndRegions = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/partner-application-countries`);
-      setAvailableCountries(response.data.countries || []);
-      // Optionally fetch regions if needed (simulate for now)
-      setAvailableRegions(response.data.regions || []);
+      // Fetch countries from the countries endpoint
+      const countriesResponse = await axios.get(`${API_BASE_URL}/api/partner-application-countries`);
+      setAvailableCountries(countriesResponse.data.countries || []);
+
+      // Fetch regions from the filters endpoint (always returns regions)
+      const filtersResponse = await axios.get(`${API_BASE_URL}/api/filters`);
+      setAvailableRegions(filtersResponse.data.regions || []);
     } catch (err) {
       // Optionally handle error
     }
@@ -225,7 +237,8 @@ function App() {
       savedFilters: activeFilters,
       savedPage: currentPage,
       savedSortField: sortField,
-      savedSortDirection: sortDirection
+      savedSortDirection: sortDirection,
+      savedTab: activeTab // Save the current tab
     };
     
     navigate(`/partner/${partner.partner_id}`, { state: currentState });
@@ -359,6 +372,18 @@ function App() {
     return colors[tier] || 'inactive';
   };
 
+  // Add handler for password submit
+  function handlePasswordSubmit() {
+    if (passwordInput === process.env.REACT_APP_PII_PASSWORD) {
+      setShowPII(true);
+      setShowPasswordModal(false);
+      setPasswordInput("");
+      setPasswordError("");
+    } else {
+      setPasswordError('Incorrect password.');
+    }
+  }
+
   if (error) {
     return (
       <div className="app-container">
@@ -377,6 +402,30 @@ function App() {
 
   return (
     <div className="app-container">
+      {/* Password Modal */}
+      {showPasswordModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+          background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+          <div style={{ background: 'white', padding: 24, borderRadius: 8, minWidth: 300, boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+            <h3>Enter password to show PII</h3>
+            <input
+              type="password"
+              value={passwordInput}
+              onChange={e => { setPasswordInput(e.target.value); setPasswordError(""); }}
+              style={{ width: '100%', padding: 8, marginTop: 8, marginBottom: 8, fontSize: 16 }}
+              autoFocus
+              onKeyDown={e => { if (e.key === 'Enter') handlePasswordSubmit(); }}
+            />
+            {passwordError && <div style={{ color: 'red', marginBottom: 8 }}>{passwordError}</div>}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button onClick={() => { setShowPasswordModal(false); setPasswordInput(""); setPasswordError(""); }} style={{ padding: '6px 16px' }}>Cancel</button>
+              <button onClick={handlePasswordSubmit} style={{ padding: '6px 16px' }}>Submit</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <header className="header">
         <div className="header-content">
@@ -398,12 +447,7 @@ function App() {
               className={`pii-toggle ${showPII ? 'pii-visible' : 'pii-hidden'}`}
               onClick={() => {
                 if (!showPII) {
-                  const pwd = window.prompt('Enter password to show PII:');
-                  if (pwd === process.env.REACT_APP_PII_PASSWORD) {
-                    setShowPII(true);
-                  } else if (pwd !== null) {
-                    window.alert('Incorrect password.');
-                  }
+                  setShowPasswordModal(true);
                 } else {
                   setShowPII(false);
                 }
@@ -447,6 +491,8 @@ function App() {
               funnelData={funnelData}
               availableCountries={availableCountries}
               availableRegions={availableRegions}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
             />
           } />
           <Route path="/partner/:partnerId" element={

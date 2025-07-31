@@ -6,6 +6,7 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
   const [tierAnalyticsData, setTierAnalyticsData] = useState(null);
   const [monthlyCountryData, setMonthlyCountryData] = useState(null);
   const [tierLoading, setTierLoading] = useState(false);
+  const [monthlyLoading, setMonthlyLoading] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState('');
   const [selectedRegion, setSelectedRegion] = useState('');
   const [selectedTierFilter, setSelectedTierFilter] = useState('all'); // 'all', 'Platinum', 'Gold', 'Silver', 'Bronze', 'Inactive'
@@ -264,15 +265,13 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
   };
 
   // Data fetching functions
+  // Fetch tier analytics only
   const fetchTierAnalytics = async (country, region) => {
-    if (!country && !region) return;
-    
+    setTierLoading(true);
     try {
-      setTierLoading(true);
       const params = new URLSearchParams();
       if (country) params.append('country', country);
       if (region) params.append('region', region);
-      
       const response = await axios.get(`${API_BASE_URL}/api/country-tier-analytics?${params}`);
       setTierAnalyticsData(response.data.data);
     } catch (err) {
@@ -282,19 +281,34 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
     }
   };
 
+  // Fetch monthly trends only
   const fetchMonthlyCountryData = async (country, region) => {
-    if (!country && !region) return;
-    
+    console.log('🔍 fetchMonthlyCountryData called:', { country, region });
+    setMonthlyLoading(true);
     try {
       const params = new URLSearchParams();
       if (country) params.append('country', country);
       if (region) params.append('region', region);
-      
-      const response = await axios.get(`${API_BASE_URL}/api/monthly-country-funnel?${params}`);
+      const url = `${API_BASE_URL}/api/monthly-country-funnel?${params}`;
+      console.log('🔍 Making API call:', url);
+      const response = await axios.get(url);
+      console.log('🔍 API response received:', response.status, response.data);
       setMonthlyCountryData(response.data.data);
+      console.log('🔍 monthlyCountryData set to:', response.data.data);
     } catch (err) {
-      console.error('Error fetching monthly country data:', err);
+      console.error('❌ Error fetching monthly country data:', err);
+      setMonthlyCountryData(null);
+    } finally {
+      setMonthlyLoading(false);
+      console.log('🔍 monthlyLoading set to false');
     }
+  };
+
+  // Fetch both, but independently
+  const fetchAllCountryData = async (country, region) => {
+    if (!country && !region) return;
+    fetchTierAnalytics(country, region);
+    fetchMonthlyCountryData(country, region);
   };
 
   const fetchTierDetail = async (tier, month = null) => {
@@ -320,50 +334,35 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
     }
   };
 
-  // Unified data fetching for both tier analytics and monthly data
-  const fetchAllCountryData = async (country, region) => {
-    if (!country && !region) return;
-    
-    try {
-      // Set loading state for both sections
-      setTierLoading(true);
-      
-      const params = new URLSearchParams();
-      if (country) params.append('country', country);
-      if (region) params.append('region', region);
-      
-      // Fetch both APIs simultaneously
-      const [tierResponse, monthlyResponse] = await Promise.all([
-        axios.get(`${API_BASE_URL}/api/country-tier-analytics?${params}`),
-        axios.get(`${API_BASE_URL}/api/monthly-country-funnel?${params}`)
-      ]);
-      
-      // Update both data sets at once
-      setTierAnalyticsData(tierResponse.data.data);
-      setMonthlyCountryData(monthlyResponse.data.data);
-      
-    } catch (err) {
-      console.error('Error fetching country data:', err);
-    } finally {
-      setTierLoading(false);
-    }
-  };
-
   // Event handlers
   const handleCountryChange = (e) => {
     const country = e.target.value;
+    console.log('🔍 handleCountryChange called with:', country);
     setSelectedCountry(country);
     setSelectedRegion(''); // Clear region when country is selected
+    
+    // Clear previous data when switching
+    setTierAnalyticsData(null);
+    setMonthlyCountryData(null);
+    
     if (country) {
+      console.log('🔍 Calling fetchAllCountryData for country:', country);
       fetchAllCountryData(country, null);
     }
   };
 
   const handleRegionChange = (e) => {
     const region = e.target.value;
+    console.log('🔍 handleRegionChange called with:', region);
     setSelectedRegion(region);
     setSelectedCountry(''); // Clear country when region is selected
+    
+    // Clear previous data when switching
+    setTierAnalyticsData(null);
+    setMonthlyCountryData(null);
+    
     if (region) {
+      console.log('🔍 Calling fetchAllCountryData for region:', region);
       fetchAllCountryData(null, region);
     }
   };
@@ -653,6 +652,17 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
               ))}
             </select>
           </div>
+          <button
+            className="btn btn-sm btn-ghost location-reset-btn"
+            style={{ marginLeft: 16, alignSelf: 'flex-end', height: 36 }}
+            onClick={() => {
+              setSelectedCountry('');
+              setSelectedRegion('');
+            }}
+            disabled={(!selectedCountry && !selectedRegion) || tierLoading}
+          >
+            Reset
+          </button>
         </div>
 
         {(selectedCountry || selectedRegion) && (
@@ -893,7 +903,8 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
                   </tr>
                 </thead>
                 <tbody>
-                  {tierLoading ? (
+                  {console.log('🔍 Monthly table render:', { monthlyLoading, monthlyCountryData: !!monthlyCountryData, monthlyDataLength: monthlyCountryData?.monthly_data?.length })}
+                  {monthlyLoading ? (
                     // Show loading rows with shimmer placeholders only
                     [...Array(6)].map((_, index) => (
                       <tr key={`loading-${index}`}>

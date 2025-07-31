@@ -23,6 +23,7 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from db_integration import db
+from region_mapping import REGION_COUNTRY_MAPPING, get_countries_for_region, get_all_regions
 
 # Load environment variables
 load_dotenv()
@@ -50,7 +51,19 @@ def load_csv_data():
     
     try:
         csv_files = ['Quarter 1.csv', 'Quarter 2.csv', 'Quarter 3.csv']
-        data_dir = '../data'
+        # Try both relative paths depending on where the script is run from
+        possible_data_dirs = ['../data', './data', '/Users/manaskarra/Desktop/Work/PDash/data']
+        data_dir = None
+        
+        for dir_path in possible_data_dirs:
+            if os.path.exists(dir_path) and os.path.isdir(dir_path):
+                data_dir = dir_path
+                break
+        
+        if not data_dir:
+            raise FileNotFoundError(f"Data directory not found. Tried: {possible_data_dirs}")
+        
+        logger.info(f"Using data directory: {data_dir}")
         all_data = []
         
         for csv_file in csv_files:
@@ -70,7 +83,7 @@ def load_csv_data():
             # Clean and standardize data
             standardize_data()
         else:
-            error_msg = "No CSV files found in ../data directory. Required files: Quarter 1.csv, Quarter 2.csv, Quarter 3.csv"
+            error_msg = f"No CSV files found in {data_dir} directory. Required files: Quarter 1.csv, Quarter 2.csv, Quarter 3.csv"
             logger.error(error_msg)
             raise FileNotFoundError(error_msg)
             
@@ -1470,7 +1483,7 @@ signal.signal(signal.SIGINT, graceful_shutdown)
 
 @app.route('/api/country-tier-analytics', methods=['GET'])
 def get_country_tier_analytics():
-    """Get comprehensive tier analytics for a specific country or region using CSV data"""
+    """Get comprehensive tier analytics for a specific country or region using CSV data for countries and Supabase data for regions"""
     try:
         if partner_data is None:
             return jsonify({'error': 'No data available'}), 400
@@ -1478,16 +1491,38 @@ def get_country_tier_analytics():
         country = request.args.get('country')
         region = request.args.get('region')
         
+        # Handle URL encoding where + should become spaces
+        if region:
+            region = region.replace('+', ' ')
+        if country:
+            country = country.replace('+', ' ')
+        
         if not country and not region:
             return jsonify({'error': 'Either country or region parameter is required'}), 400
         
-        # Filter CSV data by country or region
-        filtered_data = partner_data.copy()
-        
-        if country:
-            filtered_data = filtered_data[filtered_data['country'] == country]
-        elif region:
-            filtered_data = filtered_data[filtered_data['region'] == region]
+        # For regions, use hardcoded mapping to get countries in that region
+        if region:
+            # Get countries that belong to this region from hardcoded mapping
+            region_countries = get_countries_for_region(region)
+            
+            if not region_countries:
+                return jsonify({
+                    'success': True,
+                    'data': {
+                        'summary': {},
+                        'monthly_tier_data': {},
+                        'country_rankings': {},
+                        'available_months': []
+                    },
+                    'country': country,
+                    'region': region
+                })
+            
+            # Filter CSV data by countries in this region
+            filtered_data = partner_data[partner_data['country'].isin(region_countries)].copy()
+        else:
+            # Filter CSV data by country
+            filtered_data = partner_data[partner_data['country'] == country].copy()
         
         if filtered_data.empty:
             return jsonify({
@@ -1570,7 +1605,7 @@ def get_country_tier_analytics():
         for month_str in month_order_list:
             monthly_data[month_str] = {}
         
-        # Fill in the tier data
+        # Fill in the tier data (initially without rankings)
         for _, row in monthly_tier_data.iterrows():
             month_str = row['month']
             tier = row['partner_tier']
@@ -1584,92 +1619,193 @@ def get_country_tier_analytics():
                 'volume': float(row['volume_usd'])
             }
         
-        # Calculate real rankings by comparing against all countries
-        all_countries_data = partner_data.groupby('country').agg({
-            'partner_id': 'nunique',
-            'total_earnings': 'sum',
-            'company_revenue': 'sum',
-            'total_deposits': 'sum',
-            'active_clients': 'sum'
-        }).reset_index()
-        
-        # Calculate active partners for each country (excluding Inactive tier)
-        active_partners_by_country = []
-        for country_name in partner_data['country'].unique():
-            if pd.isna(country_name):
-                continue
-            country_data = partner_data[partner_data['country'] == country_name]
-            country_partner_tiers = country_data.groupby('partner_id')['partner_tier'].last().reset_index()
-            active_partners_count = len(country_partner_tiers[country_partner_tiers['partner_tier'] != 'Inactive'])
-            active_partners_by_country.append({
-                'country': country_name,
-                'active_partners': active_partners_count
-            })
-        
-        active_partners_df = pd.DataFrame(active_partners_by_country)
-        all_countries_data = all_countries_data.merge(active_partners_df, on='country', how='left')
-        all_countries_data['active_partners'] = all_countries_data['active_partners'].fillna(0)
-        
-        # Calculate ETR and ETD ratios for each country
-        all_countries_data['etr_ratio'] = np.where(
-            all_countries_data['company_revenue'] > 0,
-            (all_countries_data['total_earnings'] / all_countries_data['company_revenue']) * 100,
-            0
-        )
-        all_countries_data['etd_ratio'] = np.where(
-            all_countries_data['total_deposits'] > 0,
-            (all_countries_data['total_earnings'] / all_countries_data['total_deposits']) * 100,
-            0
-        )
-        
-        # Calculate rankings
-        all_countries_data['earnings_rank'] = all_countries_data['total_earnings'].rank(method='dense', ascending=False)
-        all_countries_data['revenue_rank'] = all_countries_data['company_revenue'].rank(method='dense', ascending=False)
-        all_countries_data['deposits_rank'] = all_countries_data['total_deposits'].rank(method='dense', ascending=False)
-        all_countries_data['clients_rank'] = all_countries_data['active_clients'].rank(method='dense', ascending=False)
-        all_countries_data['partners_rank'] = all_countries_data['partner_id'].rank(method='dense', ascending=False)
-        all_countries_data['active_partners_rank'] = all_countries_data['active_partners'].rank(method='dense', ascending=False)
-        all_countries_data['etr_rank'] = all_countries_data['etr_ratio'].rank(method='dense', ascending=False)
-        all_countries_data['etd_rank'] = all_countries_data['etd_ratio'].rank(method='dense', ascending=False)
-        
-        # Calculate monthly averages for ranking
-        month_count = len(month_order_list) if month_order_list else 1
-        all_countries_data['avg_monthly_revenue'] = all_countries_data['company_revenue'] / month_count
-        all_countries_data['avg_monthly_earnings'] = all_countries_data['total_earnings'] / month_count
-        all_countries_data['avg_monthly_deposits'] = all_countries_data['total_deposits'] / month_count
-        
-        # Calculate new active clients by month for each country (sum all monthly new clients)
-        monthly_new_clients_by_country = partner_data.groupby(['country', 'month'])['new_active_clients'].sum().reset_index()
-        total_new_clients_by_country = monthly_new_clients_by_country.groupby('country')['new_active_clients'].sum().reset_index()
-        all_countries_data = all_countries_data.merge(total_new_clients_by_country, on='country', how='left')
-        all_countries_data['new_active_clients'] = all_countries_data['new_active_clients'].fillna(0)
-        all_countries_data['avg_monthly_new_clients'] = all_countries_data['new_active_clients'] / month_count
-        
-        # Calculate monthly average rankings
-        all_countries_data['avg_monthly_revenue_rank'] = all_countries_data['avg_monthly_revenue'].rank(method='dense', ascending=False)
-        all_countries_data['avg_monthly_earnings_rank'] = all_countries_data['avg_monthly_earnings'].rank(method='dense', ascending=False)
-        all_countries_data['avg_monthly_deposits_rank'] = all_countries_data['avg_monthly_deposits'].rank(method='dense', ascending=False)
-        all_countries_data['avg_monthly_new_clients_rank'] = all_countries_data['avg_monthly_new_clients'].rank(method='dense', ascending=False)
-        
-        # Get rankings for the current country
-        current_country_data = all_countries_data[all_countries_data['country'] == (country if country else region)]
-        
-        if not current_country_data.empty:
-            earnings_rank = int(current_country_data.iloc[0]['earnings_rank'])
-            revenue_rank = int(current_country_data.iloc[0]['revenue_rank'])
-            deposits_rank = int(current_country_data.iloc[0]['deposits_rank'])
-            clients_rank = int(current_country_data.iloc[0]['clients_rank'])
-            partners_rank = int(current_country_data.iloc[0]['partners_rank'])
-            active_partners_rank = int(current_country_data.iloc[0]['active_partners_rank'])
-            etr_rank = int(current_country_data.iloc[0]['etr_rank'])
-            etd_rank = int(current_country_data.iloc[0]['etd_rank'])
-            # Monthly average rankings
-            avg_monthly_revenue_rank = int(current_country_data.iloc[0]['avg_monthly_revenue_rank'])
-            avg_monthly_earnings_rank = int(current_country_data.iloc[0]['avg_monthly_earnings_rank'])
-            avg_monthly_deposits_rank = int(current_country_data.iloc[0]['avg_monthly_deposits_rank'])
-            avg_monthly_new_clients_rank = int(current_country_data.iloc[0]['avg_monthly_new_clients_rank'])
+        # Calculate real rankings by comparing against all countries OR all regions
+        if region:
+            # For regions, calculate rankings against all regions
+            try:
+                # Use hardcoded region to country mapping
+                region_country_mapping = REGION_COUNTRY_MAPPING
+                
+                # Calculate metrics for each region by aggregating its countries' data
+                all_regions_data = []
+                for region_name, countries in region_country_mapping.items():
+                    region_data = partner_data[partner_data['country'].isin(countries)]
+                    if not region_data.empty:
+                        # Calculate active partners for this region (excluding Inactive tier)
+                        region_partner_tiers = region_data.groupby('partner_id')['partner_tier'].last().reset_index()
+                        active_partners_count = len(region_partner_tiers[region_partner_tiers['partner_tier'] != 'Inactive'])
+                        
+                        # Aggregate region metrics
+                        region_totals = region_data.groupby('partner_id').agg({
+                            'total_earnings': 'sum',
+                            'company_revenue': 'sum',
+                            'total_deposits': 'sum',
+                            'active_clients': 'last',
+                            'new_active_clients': 'sum'
+                        }).sum()
+                        
+                        all_regions_data.append({
+                            'region': region_name,
+                            'partner_id': len(region_data['partner_id'].unique()),
+                            'active_partners': active_partners_count,
+                            'total_earnings': region_totals['total_earnings'],
+                            'company_revenue': region_totals['company_revenue'],
+                            'total_deposits': region_totals['total_deposits'],
+                            'active_clients': region_totals['active_clients'],
+                            'new_active_clients': region_totals['new_active_clients']
+                        })
+                
+                all_regions_df = pd.DataFrame(all_regions_data)
+                
+                # Calculate ETR and ETD ratios for each region
+                all_regions_df['etr_ratio'] = np.where(
+                    all_regions_df['company_revenue'] > 0,
+                    (all_regions_df['total_earnings'] / all_regions_df['company_revenue']) * 100,
+                    0
+                )
+                all_regions_df['etd_ratio'] = np.where(
+                    all_regions_df['total_deposits'] > 0,
+                    (all_regions_df['total_earnings'] / all_regions_df['total_deposits']) * 100,
+                    0
+                )
+                
+                # Calculate rankings for regions
+                all_regions_df['earnings_rank'] = all_regions_df['total_earnings'].rank(method='dense', ascending=False)
+                all_regions_df['revenue_rank'] = all_regions_df['company_revenue'].rank(method='dense', ascending=False)
+                all_regions_df['deposits_rank'] = all_regions_df['total_deposits'].rank(method='dense', ascending=False)
+                all_regions_df['clients_rank'] = all_regions_df['active_clients'].rank(method='dense', ascending=False)
+                all_regions_df['partners_rank'] = all_regions_df['partner_id'].rank(method='dense', ascending=False)
+                all_regions_df['active_partners_rank'] = all_regions_df['active_partners'].rank(method='dense', ascending=False)
+                all_regions_df['etr_rank'] = all_regions_df['etr_ratio'].rank(method='dense', ascending=False)
+                all_regions_df['etd_rank'] = all_regions_df['etd_ratio'].rank(method='dense', ascending=False)
+                
+                # Calculate monthly averages for ranking
+                month_count = len(month_order_list) if month_order_list else 1
+                all_regions_df['avg_monthly_revenue'] = all_regions_df['company_revenue'] / month_count
+                all_regions_df['avg_monthly_earnings'] = all_regions_df['total_earnings'] / month_count
+                all_regions_df['avg_monthly_deposits'] = all_regions_df['total_deposits'] / month_count
+                all_regions_df['avg_monthly_new_clients'] = all_regions_df['new_active_clients'] / month_count
+                
+                # Calculate monthly average rankings for regions
+                all_regions_df['avg_monthly_revenue_rank'] = all_regions_df['avg_monthly_revenue'].rank(method='dense', ascending=False)
+                all_regions_df['avg_monthly_earnings_rank'] = all_regions_df['avg_monthly_earnings'].rank(method='dense', ascending=False)
+                all_regions_df['avg_monthly_deposits_rank'] = all_regions_df['avg_monthly_deposits'].rank(method='dense', ascending=False)
+                all_regions_df['avg_monthly_new_clients_rank'] = all_regions_df['avg_monthly_new_clients'].rank(method='dense', ascending=False)
+                
+                # Get rankings for the current region
+                current_region_data = all_regions_df[all_regions_df['region'] == region]
+                ranking_data_df = all_regions_df
+                current_data = current_region_data
+                
+            except Exception as e:
+                logger.error(f"Error calculating region rankings: {str(e)}")
+                # Fallback to default rankings
+                earnings_rank = revenue_rank = deposits_rank = clients_rank = partners_rank = active_partners_rank = etr_rank = etd_rank = 1
+                avg_monthly_revenue_rank = avg_monthly_earnings_rank = avg_monthly_deposits_rank = avg_monthly_new_clients_rank = 1
         else:
-            # Fallback if country not found
+            # For countries, calculate rankings against all countries (existing logic)
+            all_countries_data = partner_data.groupby('country').agg({
+                'partner_id': 'nunique',
+                'total_earnings': 'sum',
+                'company_revenue': 'sum',
+                'total_deposits': 'sum',
+                'active_clients': 'sum'
+            }).reset_index()
+            
+            # Calculate active partners for each country (excluding Inactive tier)
+            active_partners_by_country = []
+            for country_name in partner_data['country'].unique():
+                if pd.isna(country_name):
+                    continue
+                country_data = partner_data[partner_data['country'] == country_name]
+                country_partner_tiers = country_data.groupby('partner_id')['partner_tier'].last().reset_index()
+                active_partners_count = len(country_partner_tiers[country_partner_tiers['partner_tier'] != 'Inactive'])
+                active_partners_by_country.append({
+                    'country': country_name,
+                    'active_partners': active_partners_count
+                })
+            
+            active_partners_df = pd.DataFrame(active_partners_by_country)
+            all_countries_data = all_countries_data.merge(active_partners_df, on='country', how='left')
+            all_countries_data['active_partners'] = all_countries_data['active_partners'].fillna(0)
+            
+            # Calculate ETR and ETD ratios for each country
+            all_countries_data['etr_ratio'] = np.where(
+                all_countries_data['company_revenue'] > 0,
+                (all_countries_data['total_earnings'] / all_countries_data['company_revenue']) * 100,
+                0
+            )
+            all_countries_data['etd_ratio'] = np.where(
+                all_countries_data['total_deposits'] > 0,
+                (all_countries_data['total_earnings'] / all_countries_data['total_deposits']) * 100,
+                0
+            )
+            
+            # Calculate rankings
+            all_countries_data['earnings_rank'] = all_countries_data['total_earnings'].rank(method='dense', ascending=False)
+            all_countries_data['revenue_rank'] = all_countries_data['company_revenue'].rank(method='dense', ascending=False)
+            all_countries_data['deposits_rank'] = all_countries_data['total_deposits'].rank(method='dense', ascending=False)
+            all_countries_data['clients_rank'] = all_countries_data['active_clients'].rank(method='dense', ascending=False)
+            all_countries_data['partners_rank'] = all_countries_data['partner_id'].rank(method='dense', ascending=False)
+            all_countries_data['active_partners_rank'] = all_countries_data['active_partners'].rank(method='dense', ascending=False)
+            all_countries_data['etr_rank'] = all_countries_data['etr_ratio'].rank(method='dense', ascending=False)
+            all_countries_data['etd_rank'] = all_countries_data['etd_ratio'].rank(method='dense', ascending=False)
+            
+            # Calculate monthly averages for ranking
+            month_count = len(month_order_list) if month_order_list else 1
+            all_countries_data['avg_monthly_revenue'] = all_countries_data['company_revenue'] / month_count
+            all_countries_data['avg_monthly_earnings'] = all_countries_data['total_earnings'] / month_count
+            all_countries_data['avg_monthly_deposits'] = all_countries_data['total_deposits'] / month_count
+            
+            # Calculate new active clients by month for each country (sum all monthly new clients)
+            monthly_new_clients_by_country = partner_data.groupby(['country', 'month'])['new_active_clients'].sum().reset_index()
+            total_new_clients_by_country = monthly_new_clients_by_country.groupby('country')['new_active_clients'].sum().reset_index()
+            all_countries_data = all_countries_data.merge(total_new_clients_by_country, on='country', how='left')
+            all_countries_data['new_active_clients'] = all_countries_data['new_active_clients'].fillna(0)
+            all_countries_data['avg_monthly_new_clients'] = all_countries_data['new_active_clients'] / month_count
+            
+            # Calculate monthly average rankings
+            all_countries_data['avg_monthly_revenue_rank'] = all_countries_data['avg_monthly_revenue'].rank(method='dense', ascending=False)
+            all_countries_data['avg_monthly_earnings_rank'] = all_countries_data['avg_monthly_earnings'].rank(method='dense', ascending=False)
+            all_countries_data['avg_monthly_deposits_rank'] = all_countries_data['avg_monthly_deposits'].rank(method='dense', ascending=False)
+            all_countries_data['avg_monthly_new_clients_rank'] = all_countries_data['avg_monthly_new_clients'].rank(method='dense', ascending=False)
+            
+            # Get rankings for the current country
+            current_country_data = all_countries_data[all_countries_data['country'] == country]
+            ranking_data_df = all_countries_data
+            current_data = current_country_data
+        
+        # Extract rankings from the appropriate dataset (regions or countries)
+        if region and 'current_data' in locals() and not current_data.empty:
+            earnings_rank = int(current_data.iloc[0]['earnings_rank'])
+            revenue_rank = int(current_data.iloc[0]['revenue_rank'])
+            deposits_rank = int(current_data.iloc[0]['deposits_rank'])
+            clients_rank = int(current_data.iloc[0]['clients_rank'])
+            partners_rank = int(current_data.iloc[0]['partners_rank'])
+            active_partners_rank = int(current_data.iloc[0]['active_partners_rank'])
+            etr_rank = int(current_data.iloc[0]['etr_rank'])
+            etd_rank = int(current_data.iloc[0]['etd_rank'])
+            # Monthly average rankings
+            avg_monthly_revenue_rank = int(current_data.iloc[0]['avg_monthly_revenue_rank'])
+            avg_monthly_earnings_rank = int(current_data.iloc[0]['avg_monthly_earnings_rank'])
+            avg_monthly_deposits_rank = int(current_data.iloc[0]['avg_monthly_deposits_rank'])
+            avg_monthly_new_clients_rank = int(current_data.iloc[0]['avg_monthly_new_clients_rank'])
+        elif country and 'current_data' in locals() and not current_data.empty:
+            earnings_rank = int(current_data.iloc[0]['earnings_rank'])
+            revenue_rank = int(current_data.iloc[0]['revenue_rank'])
+            deposits_rank = int(current_data.iloc[0]['deposits_rank'])
+            clients_rank = int(current_data.iloc[0]['clients_rank'])
+            partners_rank = int(current_data.iloc[0]['partners_rank'])  
+            active_partners_rank = int(current_data.iloc[0]['active_partners_rank'])
+            etr_rank = int(current_data.iloc[0]['etr_rank'])
+            etd_rank = int(current_data.iloc[0]['etd_rank'])
+            # Monthly average rankings
+            avg_monthly_revenue_rank = int(current_data.iloc[0]['avg_monthly_revenue_rank'])
+            avg_monthly_earnings_rank = int(current_data.iloc[0]['avg_monthly_earnings_rank'])
+            avg_monthly_deposits_rank = int(current_data.iloc[0]['avg_monthly_deposits_rank'])
+            avg_monthly_new_clients_rank = int(current_data.iloc[0]['avg_monthly_new_clients_rank'])
+        else:
+            # Fallback if country/region not found
             earnings_rank = revenue_rank = deposits_rank = clients_rank = partners_rank = active_partners_rank = etr_rank = etd_rank = 1
             avg_monthly_revenue_rank = avg_monthly_earnings_rank = avg_monthly_deposits_rank = avg_monthly_new_clients_rank = 1
         
@@ -1702,113 +1838,225 @@ def get_country_tier_analytics():
         tier_country_rankings = {}
         monthly_rankings = {}
         
-        # For each tier, calculate how this country ranks against all other countries
+        # For each tier, calculate how this country/region ranks against all other countries/regions
         tiers = ['Platinum', 'Gold', 'Silver', 'Bronze', 'Inactive']
         for tier in tiers:
-            # Calculate tier totals for all countries
-            tier_countries_data = []
-            all_countries = partner_data['country'].unique()
-            
-            for other_country in all_countries:
-                if pd.isna(other_country):
-                    continue
+            if region:
+                # For regions: calculate tier totals for all regions and rank regions against regions
+                try:
+                    # Use hardcoded region to country mapping
+                    region_country_mapping = REGION_COUNTRY_MAPPING
                     
-                country_data = partner_data[partner_data['country'] == other_country]
-                country_partner_tiers = country_data.groupby('partner_id')['partner_tier'].last().reset_index()
-                tier_partners = country_partner_tiers[country_partner_tiers['partner_tier'] == tier]['partner_id'].tolist()
-                
-                # Include all countries, even those with 0 partners in this tier for proper ranking
-                if tier_partners:
-                    tier_data = country_data[country_data['partner_id'].isin(tier_partners)]
-                    tier_totals = tier_data.agg({
-                        'total_earnings': 'sum',
-                        'company_revenue': 'sum',
-                        'total_deposits': 'sum',
-                        'active_clients': 'sum',
-                        'new_active_clients': 'sum',
-                        'volume_usd': 'sum'
-                    })
+                    # Calculate tier totals for all regions
+                    tier_regions_data = []
+                    for region_name, countries in region_country_mapping.items():
+                        region_data = partner_data[partner_data['country'].isin(countries)]
+                        if not region_data.empty:
+                            # Get partners with this tier in this region
+                            region_partner_tiers = region_data.groupby('partner_id')['partner_tier'].last().reset_index()
+                            tier_partners = region_partner_tiers[region_partner_tiers['partner_tier'] == tier]['partner_id'].tolist()
+                            
+                            if tier_partners:
+                                tier_data = region_data[region_data['partner_id'].isin(tier_partners)]
+                                tier_totals = tier_data.agg({
+                                    'total_earnings': 'sum',
+                                    'company_revenue': 'sum',
+                                    'total_deposits': 'sum',
+                                    'active_clients': 'sum',
+                                    'new_active_clients': 'sum',
+                                    'volume_usd': 'sum'
+                                })
+                                
+                                # Calculate ETR and ETD ratios for this tier and region
+                                etr_ratio = (tier_totals['total_earnings'] / tier_totals['company_revenue'] * 100) if tier_totals['company_revenue'] > 0 else 0
+                                etd_ratio = (tier_totals['total_earnings'] / tier_totals['total_deposits'] * 100) if tier_totals['total_deposits'] > 0 else 0
+                                
+                                # Calculate monthly averages for this tier and region
+                                avg_monthly_revenue = tier_totals['company_revenue'] / month_count
+                                avg_monthly_earnings = tier_totals['total_earnings'] / month_count
+                                avg_monthly_deposits = tier_totals['total_deposits'] / month_count
+                                avg_monthly_new_clients = tier_totals['new_active_clients'] / month_count
+                                
+                                tier_regions_data.append({
+                                    'region': region_name,
+                                    'partners_count': len(tier_partners),
+                                    'earnings': tier_totals['total_earnings'],
+                                    'revenue': tier_totals['company_revenue'],
+                                    'deposits': tier_totals['total_deposits'],
+                                    'active_clients': tier_totals['active_clients'],
+                                    'new_clients': tier_totals['new_active_clients'],
+                                    'volume': tier_totals['volume_usd'],
+                                    'etr_ratio': etr_ratio,
+                                    'etd_ratio': etd_ratio,
+                                    'avg_monthly_revenue': avg_monthly_revenue,
+                                    'avg_monthly_earnings': avg_monthly_earnings,
+                                    'avg_monthly_deposits': avg_monthly_deposits,
+                                    'avg_monthly_new_clients': avg_monthly_new_clients
+                                })
+                            else:
+                                # Region has 0 partners in this tier
+                                tier_regions_data.append({
+                                    'region': region_name,
+                                    'partners_count': 0,
+                                    'earnings': 0.0,
+                                    'revenue': 0.0,
+                                    'deposits': 0.0,
+                                    'active_clients': 0,
+                                    'new_clients': 0,
+                                    'volume': 0.0,
+                                    'etr_ratio': 0.0,
+                                    'etd_ratio': 0.0,
+                                    'avg_monthly_revenue': 0.0,
+                                    'avg_monthly_earnings': 0.0,
+                                    'avg_monthly_deposits': 0.0,
+                                    'avg_monthly_new_clients': 0.0
+                                })
                     
-                    # Calculate ETR and ETD ratios for this tier and country
-                    etr_ratio = (tier_totals['total_earnings'] / tier_totals['company_revenue'] * 100) if tier_totals['company_revenue'] > 0 else 0
-                    etd_ratio = (tier_totals['total_earnings'] / tier_totals['total_deposits'] * 100) if tier_totals['total_deposits'] > 0 else 0
-                    
-                    # Calculate monthly averages for this tier and country
-                    avg_monthly_revenue = tier_totals['company_revenue'] / month_count
-                    avg_monthly_earnings = tier_totals['total_earnings'] / month_count
-                    avg_monthly_deposits = tier_totals['total_deposits'] / month_count
-                    avg_monthly_new_clients = tier_totals['new_active_clients'] / month_count
-                    
-                    tier_countries_data.append({
-                        'country': other_country,
-                        'partners_count': len(tier_partners),
-                        'earnings': tier_totals['total_earnings'],
-                        'revenue': tier_totals['company_revenue'],
-                        'deposits': tier_totals['total_deposits'],
-                        'active_clients': tier_totals['active_clients'],
-                        'new_clients': tier_totals['new_active_clients'],
-                        'volume': tier_totals['volume_usd'],
-                        'etr_ratio': etr_ratio,
-                        'etd_ratio': etd_ratio,
-                        'avg_monthly_revenue': avg_monthly_revenue,
-                        'avg_monthly_earnings': avg_monthly_earnings,
-                        'avg_monthly_deposits': avg_monthly_deposits,
-                        'avg_monthly_new_clients': avg_monthly_new_clients
-                    })
-                else:
-                    # Country has 0 partners in this tier - add with zero values for proper ranking
-                    tier_countries_data.append({
-                        'country': other_country,
-                        'partners_count': 0,
-                        'earnings': 0.0,
-                        'revenue': 0.0,
-                        'deposits': 0.0,
-                        'active_clients': 0,
-                        'new_clients': 0,
-                        'volume': 0.0,
-                        'etr_ratio': 0.0,
-                        'etd_ratio': 0.0,
-                        'avg_monthly_revenue': 0.0,
-                        'avg_monthly_earnings': 0.0,
-                        'avg_monthly_deposits': 0.0,
-                        'avg_monthly_new_clients': 0.0
-                    })
-            
-            if tier_countries_data:
-                tier_df = pd.DataFrame(tier_countries_data)
-                tier_df['partners_rank'] = tier_df['partners_count'].rank(method='dense', ascending=False)
-                tier_df['earnings_rank'] = tier_df['earnings'].rank(method='dense', ascending=False)
-                tier_df['revenue_rank'] = tier_df['revenue'].rank(method='dense', ascending=False)
-                tier_df['deposits_rank'] = tier_df['deposits'].rank(method='dense', ascending=False)
-                tier_df['active_clients_rank'] = tier_df['active_clients'].rank(method='dense', ascending=False)
-                tier_df['new_clients_rank'] = tier_df['new_clients'].rank(method='dense', ascending=False)
-                tier_df['volume_rank'] = tier_df['volume'].rank(method='dense', ascending=False)
-                tier_df['etr_rank'] = tier_df['etr_ratio'].rank(method='dense', ascending=False)
-                tier_df['etd_rank'] = tier_df['etd_ratio'].rank(method='dense', ascending=False)
-                # Monthly average rankings
-                tier_df['avg_monthly_revenue_rank'] = tier_df['avg_monthly_revenue'].rank(method='dense', ascending=False)
-                tier_df['avg_monthly_earnings_rank'] = tier_df['avg_monthly_earnings'].rank(method='dense', ascending=False)
-                tier_df['avg_monthly_deposits_rank'] = tier_df['avg_monthly_deposits'].rank(method='dense', ascending=False)
-                tier_df['avg_monthly_new_clients_rank'] = tier_df['avg_monthly_new_clients'].rank(method='dense', ascending=False)
-                
-                current_tier_data = tier_df[tier_df['country'] == (country if country else region)]
-                if not current_tier_data.empty:
-                    tier_country_rankings[tier] = {
-                        'partners_rank': int(current_tier_data.iloc[0]['partners_rank']),
-                        'earnings_rank': int(current_tier_data.iloc[0]['earnings_rank']),
-                        'revenue_rank': int(current_tier_data.iloc[0]['revenue_rank']),
-                        'deposits_rank': int(current_tier_data.iloc[0]['deposits_rank']),
-                        'active_clients_rank': int(current_tier_data.iloc[0]['active_clients_rank']),
-                        'new_clients_rank': int(current_tier_data.iloc[0]['new_clients_rank']),
-                        'volume_rank': int(current_tier_data.iloc[0]['volume_rank']),
-                        'etr_rank': int(current_tier_data.iloc[0]['etr_rank']),
-                        'etd_rank': int(current_tier_data.iloc[0]['etd_rank']),
+                    if tier_regions_data:
+                        tier_df = pd.DataFrame(tier_regions_data)
+                        tier_df['partners_rank'] = tier_df['partners_count'].rank(method='dense', ascending=False)
+                        tier_df['earnings_rank'] = tier_df['earnings'].rank(method='dense', ascending=False)
+                        tier_df['revenue_rank'] = tier_df['revenue'].rank(method='dense', ascending=False)
+                        tier_df['deposits_rank'] = tier_df['deposits'].rank(method='dense', ascending=False)
+                        tier_df['active_clients_rank'] = tier_df['active_clients'].rank(method='dense', ascending=False)
+                        tier_df['new_clients_rank'] = tier_df['new_clients'].rank(method='dense', ascending=False)
+                        tier_df['volume_rank'] = tier_df['volume'].rank(method='dense', ascending=False)
+                        tier_df['etr_rank'] = tier_df['etr_ratio'].rank(method='dense', ascending=False)
+                        tier_df['etd_rank'] = tier_df['etd_ratio'].rank(method='dense', ascending=False)
                         # Monthly average rankings
-                        'avg_monthly_revenue_rank': int(current_tier_data.iloc[0]['avg_monthly_revenue_rank']),
-                        'avg_monthly_earnings_rank': int(current_tier_data.iloc[0]['avg_monthly_earnings_rank']),
-                        'avg_monthly_deposits_rank': int(current_tier_data.iloc[0]['avg_monthly_deposits_rank']),
-                        'avg_monthly_new_clients_rank': int(current_tier_data.iloc[0]['avg_monthly_new_clients_rank'])
-                    }
+                        tier_df['avg_monthly_revenue_rank'] = tier_df['avg_monthly_revenue'].rank(method='dense', ascending=False)
+                        tier_df['avg_monthly_earnings_rank'] = tier_df['avg_monthly_earnings'].rank(method='dense', ascending=False)
+                        tier_df['avg_monthly_deposits_rank'] = tier_df['avg_monthly_deposits'].rank(method='dense', ascending=False)
+                        tier_df['avg_monthly_new_clients_rank'] = tier_df['avg_monthly_new_clients'].rank(method='dense', ascending=False)
+                        
+                        current_tier_data = tier_df[tier_df['region'] == region]
+                        if not current_tier_data.empty:
+                            tier_country_rankings[tier] = {
+                                'partners_rank': int(current_tier_data.iloc[0]['partners_rank']),
+                                'earnings_rank': int(current_tier_data.iloc[0]['earnings_rank']),
+                                'revenue_rank': int(current_tier_data.iloc[0]['revenue_rank']),
+                                'deposits_rank': int(current_tier_data.iloc[0]['deposits_rank']),
+                                'active_clients_rank': int(current_tier_data.iloc[0]['active_clients_rank']),
+                                'new_clients_rank': int(current_tier_data.iloc[0]['new_clients_rank']),
+                                'volume_rank': int(current_tier_data.iloc[0]['volume_rank']),
+                                'etr_rank': int(current_tier_data.iloc[0]['etr_rank']),
+                                'etd_rank': int(current_tier_data.iloc[0]['etd_rank']),
+                                # Monthly average rankings
+                                'avg_monthly_revenue_rank': int(current_tier_data.iloc[0]['avg_monthly_revenue_rank']),
+                                'avg_monthly_earnings_rank': int(current_tier_data.iloc[0]['avg_monthly_earnings_rank']),
+                                'avg_monthly_deposits_rank': int(current_tier_data.iloc[0]['avg_monthly_deposits_rank']),
+                                'avg_monthly_new_clients_rank': int(current_tier_data.iloc[0]['avg_monthly_new_clients_rank'])
+                            }
+                
+                except Exception as e:
+                    logger.error(f"Error calculating tier rankings for region {region}: {str(e)}")
+                    # Skip this tier if there's an error
+                    continue
+            else:
+                # For countries: calculate tier totals for all countries (existing logic)
+                tier_countries_data = []
+                all_countries = partner_data['country'].unique()
+                
+                for other_country in all_countries:
+                    if pd.isna(other_country):
+                        continue
+                        
+                    country_data = partner_data[partner_data['country'] == other_country]
+                    country_partner_tiers = country_data.groupby('partner_id')['partner_tier'].last().reset_index()
+                    tier_partners = country_partner_tiers[country_partner_tiers['partner_tier'] == tier]['partner_id'].tolist()
+                    
+                    # Include all countries, even those with 0 partners in this tier for proper ranking
+                    if tier_partners:
+                        tier_data = country_data[country_data['partner_id'].isin(tier_partners)]
+                        tier_totals = tier_data.agg({
+                            'total_earnings': 'sum',
+                            'company_revenue': 'sum',
+                            'total_deposits': 'sum',
+                            'active_clients': 'sum',
+                            'new_active_clients': 'sum',
+                            'volume_usd': 'sum'
+                        })
+                        
+                        # Calculate ETR and ETD ratios for this tier and country
+                        etr_ratio = (tier_totals['total_earnings'] / tier_totals['company_revenue'] * 100) if tier_totals['company_revenue'] > 0 else 0
+                        etd_ratio = (tier_totals['total_earnings'] / tier_totals['total_deposits'] * 100) if tier_totals['total_deposits'] > 0 else 0
+                        
+                        # Calculate monthly averages for this tier and country
+                        avg_monthly_revenue = tier_totals['company_revenue'] / month_count
+                        avg_monthly_earnings = tier_totals['total_earnings'] / month_count
+                        avg_monthly_deposits = tier_totals['total_deposits'] / month_count
+                        avg_monthly_new_clients = tier_totals['new_active_clients'] / month_count
+                        
+                        tier_countries_data.append({
+                            'country': other_country,
+                            'partners_count': len(tier_partners),
+                            'earnings': tier_totals['total_earnings'],
+                            'revenue': tier_totals['company_revenue'],
+                            'deposits': tier_totals['total_deposits'],
+                            'active_clients': tier_totals['active_clients'],
+                            'new_clients': tier_totals['new_active_clients'],
+                            'volume': tier_totals['volume_usd'],
+                            'etr_ratio': etr_ratio,
+                            'etd_ratio': etd_ratio,
+                            'avg_monthly_revenue': avg_monthly_revenue,
+                            'avg_monthly_earnings': avg_monthly_earnings,
+                            'avg_monthly_deposits': avg_monthly_deposits,
+                            'avg_monthly_new_clients': avg_monthly_new_clients
+                        })
+                    else:
+                        # Country has 0 partners in this tier - add with zero values for proper ranking
+                        tier_countries_data.append({
+                            'country': other_country,
+                            'partners_count': 0,
+                            'earnings': 0.0,
+                            'revenue': 0.0,
+                            'deposits': 0.0,
+                            'active_clients': 0,
+                            'new_clients': 0,
+                            'volume': 0.0,
+                            'etr_ratio': 0.0,
+                            'etd_ratio': 0.0,
+                            'avg_monthly_revenue': 0.0,
+                            'avg_monthly_earnings': 0.0,
+                            'avg_monthly_deposits': 0.0,
+                            'avg_monthly_new_clients': 0.0
+                        })
+                
+                if tier_countries_data:
+                    tier_df = pd.DataFrame(tier_countries_data)
+                    tier_df['partners_rank'] = tier_df['partners_count'].rank(method='dense', ascending=False)
+                    tier_df['earnings_rank'] = tier_df['earnings'].rank(method='dense', ascending=False)
+                    tier_df['revenue_rank'] = tier_df['revenue'].rank(method='dense', ascending=False)
+                    tier_df['deposits_rank'] = tier_df['deposits'].rank(method='dense', ascending=False)
+                    tier_df['active_clients_rank'] = tier_df['active_clients'].rank(method='dense', ascending=False)
+                    tier_df['new_clients_rank'] = tier_df['new_clients'].rank(method='dense', ascending=False)
+                    tier_df['volume_rank'] = tier_df['volume'].rank(method='dense', ascending=False)
+                    tier_df['etr_rank'] = tier_df['etr_ratio'].rank(method='dense', ascending=False)
+                    tier_df['etd_rank'] = tier_df['etd_ratio'].rank(method='dense', ascending=False)
+                    # Monthly average rankings
+                    tier_df['avg_monthly_revenue_rank'] = tier_df['avg_monthly_revenue'].rank(method='dense', ascending=False)
+                    tier_df['avg_monthly_earnings_rank'] = tier_df['avg_monthly_earnings'].rank(method='dense', ascending=False)
+                    tier_df['avg_monthly_deposits_rank'] = tier_df['avg_monthly_deposits'].rank(method='dense', ascending=False)
+                    tier_df['avg_monthly_new_clients_rank'] = tier_df['avg_monthly_new_clients'].rank(method='dense', ascending=False)
+                    
+                    current_tier_data = tier_df[tier_df['country'] == country]
+                    if not current_tier_data.empty:
+                        tier_country_rankings[tier] = {
+                            'partners_rank': int(current_tier_data.iloc[0]['partners_rank']),
+                            'earnings_rank': int(current_tier_data.iloc[0]['earnings_rank']),
+                            'revenue_rank': int(current_tier_data.iloc[0]['revenue_rank']),
+                            'deposits_rank': int(current_tier_data.iloc[0]['deposits_rank']),
+                            'active_clients_rank': int(current_tier_data.iloc[0]['active_clients_rank']),
+                            'new_clients_rank': int(current_tier_data.iloc[0]['new_clients_rank']),
+                            'volume_rank': int(current_tier_data.iloc[0]['volume_rank']),
+                            'etr_rank': int(current_tier_data.iloc[0]['etr_rank']),
+                            'etd_rank': int(current_tier_data.iloc[0]['etd_rank']),
+                            # Monthly average rankings
+                            'avg_monthly_revenue_rank': int(current_tier_data.iloc[0]['avg_monthly_revenue_rank']),
+                            'avg_monthly_earnings_rank': int(current_tier_data.iloc[0]['avg_monthly_earnings_rank']),
+                            'avg_monthly_deposits_rank': int(current_tier_data.iloc[0]['avg_monthly_deposits_rank']),
+                            'avg_monthly_new_clients_rank': int(current_tier_data.iloc[0]['avg_monthly_new_clients_rank'])
+                        }
         
         # Calculate monthly rankings for each metric
         # UPDATED: Calculate both overall and tier-specific monthly rankings
@@ -1817,71 +2065,153 @@ def get_country_tier_analytics():
         for month_str in monthly_data.keys():
             monthly_rankings[month_str] = {}
             
-            # Get all countries' data for this month for comparison
+            # Get all data for this month for comparison
             month_date = pd.to_datetime(month_str, format='%b %Y')
             month_data_all = partner_data[partner_data['month'] == month_date]
             
             if not month_data_all.empty:
-                countries_month_data = []
-                all_countries = month_data_all['country'].unique()
-                
-                for other_country in all_countries:
-                    if pd.isna(other_country):
-                        continue
+                if region:
+                    # For regions: calculate region vs region rankings
+                    try:
+                        # Use hardcoded region to country mapping
+                        region_country_mapping = REGION_COUNTRY_MAPPING
                         
-                    country_month_data = month_data_all[month_data_all['country'] == other_country]
-                    country_totals = country_month_data.agg({
-                        'total_earnings': 'sum',
-                        'company_revenue': 'sum',
-                        'total_deposits': 'sum',
-                        'active_clients': 'sum',
-                        'new_active_clients': 'sum',
-                        'volume_usd': 'sum',
-                        'partner_id': 'nunique'  # Count unique partners for this country in this month
-                    })
+                        # Calculate metrics for each region by aggregating its countries' data
+                        regions_month_data = []
+                        for region_name, countries in region_country_mapping.items():
+                            region_month_data = month_data_all[month_data_all['country'].isin(countries)]
+                            if not region_month_data.empty:
+                                # Aggregate region metrics for this month
+                                region_month_totals = region_month_data.agg({
+                                    'total_earnings': 'sum',
+                                    'company_revenue': 'sum',
+                                    'total_deposits': 'sum',
+                                    'active_clients': 'sum',
+                                    'new_active_clients': 'sum',
+                                    'volume_usd': 'sum',
+                                    'partner_id': 'nunique'
+                                })
+                                
+                                # Calculate ETR and ETD ratios for this month and region
+                                etr_ratio = (region_month_totals['total_earnings'] / region_month_totals['company_revenue'] * 100) if region_month_totals['company_revenue'] > 0 else 0
+                                etd_ratio = (region_month_totals['total_earnings'] / region_month_totals['total_deposits'] * 100) if region_month_totals['total_deposits'] > 0 else 0
+                                
+                                regions_month_data.append({
+                                    'region': region_name,
+                                    'partners_count': region_month_totals['partner_id'],
+                                    'earnings': region_month_totals['total_earnings'],
+                                    'revenue': region_month_totals['company_revenue'],
+                                    'deposits': region_month_totals['total_deposits'],
+                                    'active_clients': region_month_totals['active_clients'],
+                                    'new_clients': region_month_totals['new_active_clients'],
+                                    'volume': region_month_totals['volume_usd'],
+                                    'etr_ratio': etr_ratio,
+                                    'etd_ratio': etd_ratio
+                                })
+                            else:
+                                # Region has no data for this month
+                                regions_month_data.append({
+                                    'region': region_name,
+                                    'partners_count': 0,
+                                    'earnings': 0.0,
+                                    'revenue': 0.0,
+                                    'deposits': 0.0,
+                                    'active_clients': 0,
+                                    'new_clients': 0,
+                                    'volume': 0.0,
+                                    'etr_ratio': 0.0,
+                                    'etd_ratio': 0.0
+                                })
+                        
+                        if regions_month_data:
+                            month_df = pd.DataFrame(regions_month_data)
+                            month_df['partners_rank'] = month_df['partners_count'].rank(method='dense', ascending=False)
+                            month_df['earnings_rank'] = month_df['earnings'].rank(method='dense', ascending=False)
+                            month_df['revenue_rank'] = month_df['revenue'].rank(method='dense', ascending=False)
+                            month_df['deposits_rank'] = month_df['deposits'].rank(method='dense', ascending=False)
+                            month_df['active_clients_rank'] = month_df['active_clients'].rank(method='dense', ascending=False)
+                            month_df['new_clients_rank'] = month_df['new_clients'].rank(method='dense', ascending=False)
+                            month_df['volume_rank'] = month_df['volume'].rank(method='dense', ascending=False)
+                            month_df['etr_rank'] = month_df['etr_ratio'].rank(method='dense', ascending=False)
+                            month_df['etd_rank'] = month_df['etd_ratio'].rank(method='dense', ascending=False)
+                            
+                            current_month_data = month_df[month_df['region'] == region]
+                            if not current_month_data.empty:
+                                monthly_rankings[month_str] = {
+                                    'partners_rank': int(current_month_data.iloc[0]['partners_rank']),
+                                    'earnings_rank': int(current_month_data.iloc[0]['earnings_rank']),
+                                    'revenue_rank': int(current_month_data.iloc[0]['revenue_rank']),
+                                    'deposits_rank': int(current_month_data.iloc[0]['deposits_rank']),
+                                    'active_clients_rank': int(current_month_data.iloc[0]['active_clients_rank']),
+                                    'new_clients_rank': int(current_month_data.iloc[0]['new_clients_rank']),
+                                    'volume_rank': int(current_month_data.iloc[0]['volume_rank']),
+                                    'etr_rank': int(current_month_data.iloc[0]['etr_rank']),
+                                    'etd_rank': int(current_month_data.iloc[0]['etd_rank'])
+                                }
+                    except Exception as e:
+                        logger.error(f"Error calculating region monthly rankings for {month_str}: {str(e)}")
+                else:
+                    # For countries: original country vs country rankings logic
+                    countries_month_data = []
+                    all_countries = month_data_all['country'].unique()
                     
-                    # Calculate ETR and ETD ratios for this month and country
-                    etr_ratio = (country_totals['total_earnings'] / country_totals['company_revenue'] * 100) if country_totals['company_revenue'] > 0 else 0
-                    etd_ratio = (country_totals['total_earnings'] / country_totals['total_deposits'] * 100) if country_totals['total_deposits'] > 0 else 0
+                    for other_country in all_countries:
+                        if pd.isna(other_country):
+                            continue
+                            
+                        country_month_data = month_data_all[month_data_all['country'] == other_country]
+                        country_totals = country_month_data.agg({
+                            'total_earnings': 'sum',
+                            'company_revenue': 'sum',
+                            'total_deposits': 'sum',
+                            'active_clients': 'sum',
+                            'new_active_clients': 'sum',
+                            'volume_usd': 'sum',
+                            'partner_id': 'nunique'  # Count unique partners for this country in this month
+                        })
+                        
+                        # Calculate ETR and ETD ratios for this month and country
+                        etr_ratio = (country_totals['total_earnings'] / country_totals['company_revenue'] * 100) if country_totals['company_revenue'] > 0 else 0
+                        etd_ratio = (country_totals['total_earnings'] / country_totals['total_deposits'] * 100) if country_totals['total_deposits'] > 0 else 0
+                        
+                        countries_month_data.append({
+                            'country': other_country,
+                            'partners_count': country_totals['partner_id'],
+                            'earnings': country_totals['total_earnings'],
+                            'revenue': country_totals['company_revenue'],
+                            'deposits': country_totals['total_deposits'],
+                            'active_clients': country_totals['active_clients'],
+                            'new_clients': country_totals['new_active_clients'],
+                            'volume': country_totals['volume_usd'],
+                            'etr_ratio': etr_ratio,
+                            'etd_ratio': etd_ratio
+                        })
                     
-                    countries_month_data.append({
-                        'country': other_country,
-                        'partners_count': country_totals['partner_id'],
-                        'earnings': country_totals['total_earnings'],
-                        'revenue': country_totals['company_revenue'],
-                        'deposits': country_totals['total_deposits'],
-                        'active_clients': country_totals['active_clients'],
-                        'new_clients': country_totals['new_active_clients'],
-                        'volume': country_totals['volume_usd'],
-                        'etr_ratio': etr_ratio,
-                        'etd_ratio': etd_ratio
-                    })
-                
-                if countries_month_data:
-                    month_df = pd.DataFrame(countries_month_data)
-                    month_df['partners_rank'] = month_df['partners_count'].rank(method='dense', ascending=False)
-                    month_df['earnings_rank'] = month_df['earnings'].rank(method='dense', ascending=False)
-                    month_df['revenue_rank'] = month_df['revenue'].rank(method='dense', ascending=False)
-                    month_df['deposits_rank'] = month_df['deposits'].rank(method='dense', ascending=False)
-                    month_df['active_clients_rank'] = month_df['active_clients'].rank(method='dense', ascending=False)
-                    month_df['new_clients_rank'] = month_df['new_clients'].rank(method='dense', ascending=False)
-                    month_df['volume_rank'] = month_df['volume'].rank(method='dense', ascending=False)
-                    month_df['etr_rank'] = month_df['etr_ratio'].rank(method='dense', ascending=False)
-                    month_df['etd_rank'] = month_df['etd_ratio'].rank(method='dense', ascending=False)
-                    
-                    current_month_data = month_df[month_df['country'] == (country if country else region)]
-                    if not current_month_data.empty:
-                        monthly_rankings[month_str] = {
-                            'partners_rank': int(current_month_data.iloc[0]['partners_rank']),
-                            'earnings_rank': int(current_month_data.iloc[0]['earnings_rank']),
-                            'revenue_rank': int(current_month_data.iloc[0]['revenue_rank']),
-                            'deposits_rank': int(current_month_data.iloc[0]['deposits_rank']),
-                            'active_clients_rank': int(current_month_data.iloc[0]['active_clients_rank']),
-                            'new_clients_rank': int(current_month_data.iloc[0]['new_clients_rank']),
-                            'volume_rank': int(current_month_data.iloc[0]['volume_rank']),
-                            'etr_rank': int(current_month_data.iloc[0]['etr_rank']),
-                            'etd_rank': int(current_month_data.iloc[0]['etd_rank'])
-                        }
+                    if countries_month_data:
+                        month_df = pd.DataFrame(countries_month_data)
+                        month_df['partners_rank'] = month_df['partners_count'].rank(method='dense', ascending=False)
+                        month_df['earnings_rank'] = month_df['earnings'].rank(method='dense', ascending=False)
+                        month_df['revenue_rank'] = month_df['revenue'].rank(method='dense', ascending=False)
+                        month_df['deposits_rank'] = month_df['deposits'].rank(method='dense', ascending=False)
+                        month_df['active_clients_rank'] = month_df['active_clients'].rank(method='dense', ascending=False)
+                        month_df['new_clients_rank'] = month_df['new_clients'].rank(method='dense', ascending=False)
+                        month_df['volume_rank'] = month_df['volume'].rank(method='dense', ascending=False)
+                        month_df['etr_rank'] = month_df['etr_ratio'].rank(method='dense', ascending=False)
+                        month_df['etd_rank'] = month_df['etd_ratio'].rank(method='dense', ascending=False)
+                        
+                        current_month_data = month_df[month_df['country'] == country]
+                        if not current_month_data.empty:
+                            monthly_rankings[month_str] = {
+                                'partners_rank': int(current_month_data.iloc[0]['partners_rank']),
+                                'earnings_rank': int(current_month_data.iloc[0]['earnings_rank']),
+                                'revenue_rank': int(current_month_data.iloc[0]['revenue_rank']),
+                                'deposits_rank': int(current_month_data.iloc[0]['deposits_rank']),
+                                'active_clients_rank': int(current_month_data.iloc[0]['active_clients_rank']),
+                                'new_clients_rank': int(current_month_data.iloc[0]['new_clients_rank']),
+                                'volume_rank': int(current_month_data.iloc[0]['volume_rank']),
+                                'etr_rank': int(current_month_data.iloc[0]['etr_rank']),
+                                'etd_rank': int(current_month_data.iloc[0]['etd_rank'])
+                            }
 
         # Calculate tier-specific monthly rankings
         for tier in ['Platinum', 'Gold', 'Silver', 'Bronze', 'Inactive']:
@@ -1892,86 +2222,185 @@ def get_country_tier_analytics():
                 month_data_all = partner_data[partner_data['month'] == month_date]
                 
                 if not month_data_all.empty:
-                    # Calculate tier-specific data for all countries for this month
-                    tier_countries_month_data = []
-                    all_countries = month_data_all['country'].unique()
-                    
-                    for other_country in all_countries:
-                        if pd.isna(other_country):
-                            continue
+                    if region:
+                        # For regions: calculate tier-specific region vs region rankings
+                        try:
+                            # Use hardcoded region to country mapping (reuse from above)
+                            region_country_mapping = REGION_COUNTRY_MAPPING
                             
-                        country_month_data = month_data_all[month_data_all['country'] == other_country]
-                        # Get partners of this tier for this country in this month
-                        country_partner_tiers = country_month_data.groupby('partner_id')['partner_tier'].last().reset_index()
-                        tier_partners = country_partner_tiers[country_partner_tiers['partner_tier'] == tier]['partner_id'].tolist()
+                            # Calculate tier-specific data for all regions for this month
+                            tier_regions_month_data = []
+                            for region_name, countries in region_country_mapping.items():
+                                region_month_data = month_data_all[month_data_all['country'].isin(countries)]
+                                if not region_month_data.empty:
+                                    # Get partners of this tier for this region in this month
+                                    region_partner_tiers = region_month_data.groupby('partner_id')['partner_tier'].last().reset_index()
+                                    tier_partners = region_partner_tiers[region_partner_tiers['partner_tier'] == tier]['partner_id'].tolist()
+                                    
+                                    if tier_partners:
+                                        tier_region_month_data = region_month_data[region_month_data['partner_id'].isin(tier_partners)]
+                                        tier_region_month_totals = tier_region_month_data.agg({
+                                            'total_earnings': 'sum',
+                                            'company_revenue': 'sum',
+                                            'total_deposits': 'sum',
+                                            'active_clients': 'sum',
+                                            'new_active_clients': 'sum',
+                                            'volume_usd': 'sum',
+                                            'partner_id': 'nunique'
+                                        })
+                                        
+                                        etr_ratio = (tier_region_month_totals['total_earnings'] / tier_region_month_totals['company_revenue'] * 100) if tier_region_month_totals['company_revenue'] > 0 else 0
+                                        etd_ratio = (tier_region_month_totals['total_earnings'] / tier_region_month_totals['total_deposits'] * 100) if tier_region_month_totals['total_deposits'] > 0 else 0
+                                        
+                                        tier_regions_month_data.append({
+                                            'region': region_name,
+                                            'partners_count': tier_region_month_totals['partner_id'],
+                                            'earnings': tier_region_month_totals['total_earnings'],
+                                            'revenue': tier_region_month_totals['company_revenue'],
+                                            'deposits': tier_region_month_totals['total_deposits'],
+                                            'active_clients': tier_region_month_totals['active_clients'],
+                                            'new_clients': tier_region_month_totals['new_active_clients'],
+                                            'volume': tier_region_month_totals['volume_usd'],
+                                            'etr_ratio': etr_ratio,
+                                            'etd_ratio': etd_ratio
+                                        })
+                                    else:
+                                        # Region has 0 partners in this tier for this month
+                                        tier_regions_month_data.append({
+                                            'region': region_name,
+                                            'partners_count': 0,
+                                            'earnings': 0.0,
+                                            'revenue': 0.0,
+                                            'deposits': 0.0,
+                                            'active_clients': 0,
+                                            'new_clients': 0,
+                                            'volume': 0.0,
+                                            'etr_ratio': 0.0,
+                                            'etd_ratio': 0.0
+                                        })
+                                else:
+                                    # Region has no data for this month
+                                    tier_regions_month_data.append({
+                                        'region': region_name,
+                                        'partners_count': 0,
+                                        'earnings': 0.0,
+                                        'revenue': 0.0,
+                                        'deposits': 0.0,
+                                        'active_clients': 0,
+                                        'new_clients': 0,
+                                        'volume': 0.0,
+                                        'etr_ratio': 0.0,
+                                        'etd_ratio': 0.0
+                                    })
+                            
+                            if tier_regions_month_data:
+                                tier_month_df = pd.DataFrame(tier_regions_month_data)
+                                tier_month_df['partners_rank'] = tier_month_df['partners_count'].rank(method='dense', ascending=False)
+                                tier_month_df['earnings_rank'] = tier_month_df['earnings'].rank(method='dense', ascending=False)
+                                tier_month_df['revenue_rank'] = tier_month_df['revenue'].rank(method='dense', ascending=False)
+                                tier_month_df['deposits_rank'] = tier_month_df['deposits'].rank(method='dense', ascending=False)
+                                tier_month_df['active_clients_rank'] = tier_month_df['active_clients'].rank(method='dense', ascending=False)
+                                tier_month_df['new_clients_rank'] = tier_month_df['new_clients'].rank(method='dense', ascending=False)
+                                tier_month_df['volume_rank'] = tier_month_df['volume'].rank(method='dense', ascending=False)
+                                tier_month_df['etr_rank'] = tier_month_df['etr_ratio'].rank(method='dense', ascending=False)
+                                tier_month_df['etd_rank'] = tier_month_df['etd_ratio'].rank(method='dense', ascending=False)
+                                
+                                current_tier_month_data = tier_month_df[tier_month_df['region'] == region]
+                                if not current_tier_month_data.empty:
+                                    tier_monthly_rankings[tier][month_str] = {
+                                        'partners_rank': int(current_tier_month_data.iloc[0]['partners_rank']),
+                                        'earnings_rank': int(current_tier_month_data.iloc[0]['earnings_rank']),
+                                        'revenue_rank': int(current_tier_month_data.iloc[0]['revenue_rank']),
+                                        'deposits_rank': int(current_tier_month_data.iloc[0]['deposits_rank']),
+                                        'active_clients_rank': int(current_tier_month_data.iloc[0]['active_clients_rank']),
+                                        'new_clients_rank': int(current_tier_month_data.iloc[0]['new_clients_rank']),
+                                        'volume_rank': int(current_tier_month_data.iloc[0]['volume_rank']),
+                                        'etr_rank': int(current_tier_month_data.iloc[0]['etr_rank']),
+                                        'etd_rank': int(current_tier_month_data.iloc[0]['etd_rank'])
+                                    }
+                        except Exception as e:
+                            logger.error(f"Error calculating region tier monthly rankings for {tier} {month_str}: {str(e)}")
+                    else:
+                        # For countries: original tier-specific country vs country rankings logic
+                        tier_countries_month_data = []
+                        all_countries = month_data_all['country'].unique()
                         
-                        if tier_partners:
-                            tier_month_data = country_month_data[country_month_data['partner_id'].isin(tier_partners)]
-                            tier_month_totals = tier_month_data.agg({
-                                'total_earnings': 'sum',
-                                'company_revenue': 'sum',
-                                'total_deposits': 'sum',
-                                'active_clients': 'sum',
-                                'new_active_clients': 'sum',
-                                'volume_usd': 'sum',
-                                'partner_id': 'nunique'
-                            })
+                        for other_country in all_countries:
+                            if pd.isna(other_country):
+                                continue
+                                
+                            country_month_data = month_data_all[month_data_all['country'] == other_country]
+                            # Get partners of this tier for this country in this month
+                            country_partner_tiers = country_month_data.groupby('partner_id')['partner_tier'].last().reset_index()
+                            tier_partners = country_partner_tiers[country_partner_tiers['partner_tier'] == tier]['partner_id'].tolist()
                             
-                            etr_ratio = (tier_month_totals['total_earnings'] / tier_month_totals['company_revenue'] * 100) if tier_month_totals['company_revenue'] > 0 else 0
-                            etd_ratio = (tier_month_totals['total_earnings'] / tier_month_totals['total_deposits'] * 100) if tier_month_totals['total_deposits'] > 0 else 0
-                            
-                            tier_countries_month_data.append({
-                                'country': other_country,
-                                'partners_count': tier_month_totals['partner_id'],
-                                'earnings': tier_month_totals['total_earnings'],
-                                'revenue': tier_month_totals['company_revenue'],
-                                'deposits': tier_month_totals['total_deposits'],
-                                'active_clients': tier_month_totals['active_clients'],
-                                'new_clients': tier_month_totals['new_active_clients'],
-                                'volume': tier_month_totals['volume_usd'],
-                                'etr_ratio': etr_ratio,
-                                'etd_ratio': etd_ratio
-                            })
-                        else:
-                            # Country has 0 partners in this tier for this month
-                            tier_countries_month_data.append({
-                                'country': other_country,
-                                'partners_count': 0,
-                                'earnings': 0.0,
-                                'revenue': 0.0,
-                                'deposits': 0.0,
-                                'active_clients': 0,
-                                'new_clients': 0,
-                                'volume': 0.0,
-                                'etr_ratio': 0.0,
-                                'etd_ratio': 0.0
-                            })
-                    
-                    if tier_countries_month_data:
-                        tier_month_df = pd.DataFrame(tier_countries_month_data)
-                        tier_month_df['partners_rank'] = tier_month_df['partners_count'].rank(method='dense', ascending=False)
-                        tier_month_df['earnings_rank'] = tier_month_df['earnings'].rank(method='dense', ascending=False)
-                        tier_month_df['revenue_rank'] = tier_month_df['revenue'].rank(method='dense', ascending=False)
-                        tier_month_df['deposits_rank'] = tier_month_df['deposits'].rank(method='dense', ascending=False)
-                        tier_month_df['active_clients_rank'] = tier_month_df['active_clients'].rank(method='dense', ascending=False)
-                        tier_month_df['new_clients_rank'] = tier_month_df['new_clients'].rank(method='dense', ascending=False)
-                        tier_month_df['volume_rank'] = tier_month_df['volume'].rank(method='dense', ascending=False)
-                        tier_month_df['etr_rank'] = tier_month_df['etr_ratio'].rank(method='dense', ascending=False)
-                        tier_month_df['etd_rank'] = tier_month_df['etd_ratio'].rank(method='dense', ascending=False)
+                            if tier_partners:
+                                tier_month_data = country_month_data[country_month_data['partner_id'].isin(tier_partners)]
+                                tier_month_totals = tier_month_data.agg({
+                                    'total_earnings': 'sum',
+                                    'company_revenue': 'sum',
+                                    'total_deposits': 'sum',
+                                    'active_clients': 'sum',
+                                    'new_active_clients': 'sum',
+                                    'volume_usd': 'sum',
+                                    'partner_id': 'nunique'
+                                })
+                                
+                                etr_ratio = (tier_month_totals['total_earnings'] / tier_month_totals['company_revenue'] * 100) if tier_month_totals['company_revenue'] > 0 else 0
+                                etd_ratio = (tier_month_totals['total_earnings'] / tier_month_totals['total_deposits'] * 100) if tier_month_totals['total_deposits'] > 0 else 0
+                                
+                                tier_countries_month_data.append({
+                                    'country': other_country,
+                                    'partners_count': tier_month_totals['partner_id'],
+                                    'earnings': tier_month_totals['total_earnings'],
+                                    'revenue': tier_month_totals['company_revenue'],
+                                    'deposits': tier_month_totals['total_deposits'],
+                                    'active_clients': tier_month_totals['active_clients'],
+                                    'new_clients': tier_month_totals['new_active_clients'],
+                                    'volume': tier_month_totals['volume_usd'],
+                                    'etr_ratio': etr_ratio,
+                                    'etd_ratio': etd_ratio
+                                })
+                            else:
+                                # Country has 0 partners in this tier for this month
+                                tier_countries_month_data.append({
+                                    'country': other_country,
+                                    'partners_count': 0,
+                                    'earnings': 0.0,
+                                    'revenue': 0.0,
+                                    'deposits': 0.0,
+                                    'active_clients': 0,
+                                    'new_clients': 0,
+                                    'volume': 0.0,
+                                    'etr_ratio': 0.0,
+                                    'etd_ratio': 0.0
+                                })
                         
-                        current_tier_month_data = tier_month_df[tier_month_df['country'] == (country if country else region)]
-                        if not current_tier_month_data.empty:
-                            tier_monthly_rankings[tier][month_str] = {
-                                'partners_rank': int(current_tier_month_data.iloc[0]['partners_rank']),
-                                'earnings_rank': int(current_tier_month_data.iloc[0]['earnings_rank']),
-                                'revenue_rank': int(current_tier_month_data.iloc[0]['revenue_rank']),
-                                'deposits_rank': int(current_tier_month_data.iloc[0]['deposits_rank']),
-                                'active_clients_rank': int(current_tier_month_data.iloc[0]['active_clients_rank']),
-                                'new_clients_rank': int(current_tier_month_data.iloc[0]['new_clients_rank']),
-                                'volume_rank': int(current_tier_month_data.iloc[0]['volume_rank']),
-                                'etr_rank': int(current_tier_month_data.iloc[0]['etr_rank']),
-                                'etd_rank': int(current_tier_month_data.iloc[0]['etd_rank'])
-                            }
+                        if tier_countries_month_data:
+                            tier_month_df = pd.DataFrame(tier_countries_month_data)
+                            tier_month_df['partners_rank'] = tier_month_df['partners_count'].rank(method='dense', ascending=False)
+                            tier_month_df['earnings_rank'] = tier_month_df['earnings'].rank(method='dense', ascending=False)
+                            tier_month_df['revenue_rank'] = tier_month_df['revenue'].rank(method='dense', ascending=False)
+                            tier_month_df['deposits_rank'] = tier_month_df['deposits'].rank(method='dense', ascending=False)
+                            tier_month_df['active_clients_rank'] = tier_month_df['active_clients'].rank(method='dense', ascending=False)
+                            tier_month_df['new_clients_rank'] = tier_month_df['new_clients'].rank(method='dense', ascending=False)
+                            tier_month_df['volume_rank'] = tier_month_df['volume'].rank(method='dense', ascending=False)
+                            tier_month_df['etr_rank'] = tier_month_df['etr_ratio'].rank(method='dense', ascending=False)
+                            tier_month_df['etd_rank'] = tier_month_df['etd_ratio'].rank(method='dense', ascending=False)
+                            
+                            current_tier_month_data = tier_month_df[tier_month_df['country'] == country]
+                            if not current_tier_month_data.empty:
+                                tier_monthly_rankings[tier][month_str] = {
+                                    'partners_rank': int(current_tier_month_data.iloc[0]['partners_rank']),
+                                    'earnings_rank': int(current_tier_month_data.iloc[0]['earnings_rank']),
+                                    'revenue_rank': int(current_tier_month_data.iloc[0]['revenue_rank']),
+                                    'deposits_rank': int(current_tier_month_data.iloc[0]['deposits_rank']),
+                                    'active_clients_rank': int(current_tier_month_data.iloc[0]['active_clients_rank']),
+                                    'new_clients_rank': int(current_tier_month_data.iloc[0]['new_clients_rank']),
+                                    'volume_rank': int(current_tier_month_data.iloc[0]['volume_rank']),
+                                    'etr_rank': int(current_tier_month_data.iloc[0]['etr_rank']),
+                                    'etd_rank': int(current_tier_month_data.iloc[0]['etd_rank'])
+                                }
 
         # Calculate global totals for percentage calculations (matching Partner Overview methodology)
         global_summary = partner_data.groupby('partner_id').agg({
@@ -2015,6 +2444,36 @@ def get_country_tier_analytics():
                 }
         
         global_totals['tier_totals'] = tier_totals
+
+        # ENHANCEMENT: Add ranking information to monthly tier data
+        for month_str in monthly_data.keys():
+            # Add overall monthly rankings (non-tier-specific) to the monthly data
+            if month_str in monthly_rankings:
+                for tier in monthly_data[month_str].keys():
+                    if tier in monthly_data[month_str]:
+                        monthly_data[month_str][tier].update({
+                            'active_clients_rank': monthly_rankings[month_str].get('active_clients_rank', 0),
+                            'earnings_rank': monthly_rankings[month_str].get('earnings_rank', 0),
+                            'revenue_rank': monthly_rankings[month_str].get('revenue_rank', 0),
+                            'deposits_rank': monthly_rankings[month_str].get('deposits_rank', 0),
+                            'partners_rank': monthly_rankings[month_str].get('partners_rank', 0),
+                            'new_clients_rank': monthly_rankings[month_str].get('new_clients_rank', 0),
+                            'volume_rank': monthly_rankings[month_str].get('volume_rank', 0)
+                        })
+            
+            # Add tier-specific monthly rankings to the monthly data
+            for tier in monthly_data[month_str].keys():
+                if tier in tier_monthly_rankings and month_str in tier_monthly_rankings[tier]:
+                    tier_ranks = tier_monthly_rankings[tier][month_str]
+                    monthly_data[month_str][tier].update({
+                        'tier_active_clients_rank': tier_ranks.get('active_clients_rank', 0),
+                        'tier_earnings_rank': tier_ranks.get('earnings_rank', 0),
+                        'tier_revenue_rank': tier_ranks.get('revenue_rank', 0),
+                        'tier_deposits_rank': tier_ranks.get('deposits_rank', 0),
+                        'tier_partners_rank': tier_ranks.get('partners_rank', 0),
+                        'tier_new_clients_rank': tier_ranks.get('new_clients_rank', 0),
+                        'tier_volume_rank': tier_ranks.get('volume_rank', 0)
+                    })
 
         analytics_data = {
             'summary': summary,
@@ -2078,6 +2537,12 @@ def get_monthly_country_funnel():
     try:
         country = request.args.get('country')
         region = request.args.get('region')
+        
+        # Handle URL encoding where + should become spaces
+        if region:
+            region = region.replace('+', ' ')
+        if country:
+            country = country.replace('+', ' ')
         
         if not country and not region:
             return jsonify({'error': 'Either country or region parameter is required'}), 400

@@ -31,9 +31,11 @@ const Dashboard = ({
   onPageChange,
   funnelData,
   availableCountries,
-  availableRegions
+  availableRegions,
+  activeTab,
+  setActiveTab
 }) => {
-  const [activeTab, setActiveTab] = useState('overview');
+  // Use activeTab and setActiveTab from props
   return (
     <div className="dashboard-container">
       {/* Main Navigation Tabs */}
