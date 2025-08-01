@@ -42,10 +42,10 @@ const TierAnalytics = ({ analytics, formatCurrency, formatNumber, formatVolume, 
           <div className="stacked-chart">
             <div className="stacked-chart-header">
               <span className="stacked-chart-label">Commission Distribution</span>
-              <span className="stacked-chart-total">{formatVolume(analytics.totals.total_earnings)}</span>
+              <span className="stacked-chart-total">{formatVolume(analytics?.totals?.total_earnings || 0)}</span>
             </div>
             <div className="stacked-bar">
-              {analytics.tier_summary.map(tier => (
+              {(analytics?.tier_summary || []).map(tier => (
                 <div 
                   key={tier.tier}
                   className={`stacked-segment tier-${tier.tier.toLowerCase()}`}
@@ -63,10 +63,10 @@ const TierAnalytics = ({ analytics, formatCurrency, formatNumber, formatVolume, 
           <div className="stacked-chart">
             <div className="stacked-chart-header">
               <span className="stacked-chart-label">Revenue Distribution</span>
-              <span className="stacked-chart-total">{formatVolume(analytics.totals.total_revenue)}</span>
+              <span className="stacked-chart-total">{formatVolume(analytics?.totals?.total_revenue || 0)}</span>
             </div>
             <div className="stacked-bar">
-              {analytics.tier_summary.map(tier => (
+              {(analytics?.tier_summary || []).map(tier => (
                 <div 
                   key={tier.tier}
                   className={`stacked-segment tier-${tier.tier.toLowerCase()}`}
@@ -84,10 +84,10 @@ const TierAnalytics = ({ analytics, formatCurrency, formatNumber, formatVolume, 
           <div className="stacked-chart">
             <div className="stacked-chart-header">
               <span className="stacked-chart-label">Active Clients Distribution</span>
-              <span className="stacked-chart-total">{formatNumber(analytics.totals.total_active_clients)}</span>
+              <span className="stacked-chart-total">{formatNumber(analytics?.totals?.total_active_clients || 0)}</span>
             </div>
             <div className="stacked-bar">
-              {analytics.tier_summary.map(tier => (
+              {(analytics?.tier_summary || []).map(tier => (
                 <div 
                   key={tier.tier}
                   className={`stacked-segment tier-${tier.tier.toLowerCase()}`}

@@ -173,7 +173,7 @@ function App() {
       const response = await axios.get(`${API_BASE_URL}/api/tier-analytics${cacheBuster}`);
       const data = response.data;
       
-      // Set performance analytics data (monthly_charts and totals)
+      // Set performance analytics data (monthly_charts and totals only)
       const performanceData = {
         monthly_charts: data.monthly_charts,
         totals: data.totals
