@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, funnelData, availableCountries, availableRegions }) => {
   const [tierAnalyticsData, setTierAnalyticsData] = useState(null);
@@ -16,6 +17,137 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
   const [tierModalData, setTierModalData] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [clickedTier, setClickedTier] = useState('');
+  // State for monthly performance trends
+  const [activePerformanceChart, setActivePerformanceChart] = useState('company_revenue');
+
+  // Helper functions for monthly performance trends
+  const formatChartData = () => {
+    if (!tierAnalyticsData?.monthly_tier_data || !tierAnalyticsData?.available_months) {
+      return [];
+    }
+
+    const months = tierAnalyticsData.available_months;
+    const chartData = [];
+
+    months.forEach(month => {
+      const monthData = tierAnalyticsData.monthly_tier_data[month] || {};
+      
+      // Calculate totals for each tier
+      const dataPoint = {
+        month: month,
+        platinum: 0,
+        gold: 0,
+        silver: 0,
+        bronze: 0,
+        inactive: 0
+      };
+
+      // Add tier data based on active chart
+      const tiers = ['Platinum', 'Gold', 'Silver', 'Bronze', 'Inactive'];
+      tiers.forEach(tier => {
+        const tierData = monthData[tier] || {};
+        const tierKey = tier.toLowerCase();
+        
+        if (activePerformanceChart === 'company_revenue') {
+          dataPoint[tierKey] = tierData.revenue || 0;
+        } else if (activePerformanceChart === 'total_earnings') {
+          dataPoint[tierKey] = tierData.earnings || 0;
+        } else if (activePerformanceChart === 'active_clients') {
+          dataPoint[tierKey] = tierData.active_clients || 0;
+        } else if (activePerformanceChart === 'new_clients') {
+          dataPoint[tierKey] = tierData.new_clients || 0;
+        } else if (activePerformanceChart === 'total_deposits') {
+          dataPoint[tierKey] = tierData.deposits || 0;
+        }
+      });
+
+      chartData.push(dataPoint);
+    });
+
+    return chartData;
+  };
+
+  const getPerformanceChartTitle = () => {
+    const titles = {
+      'company_revenue': 'Company Revenue by Tier',
+      'total_earnings': 'Partner Earnings by Tier',
+      'active_clients': 'Active Clients by Tier',
+      'new_clients': 'New Clients by Tier',
+      'total_deposits': 'Total Deposits by Tier'
+    };
+    return titles[activePerformanceChart] || 'Performance by Tier';
+  };
+
+  const formatCurrency = (value) => {
+    if (value >= 1000000) {
+      return `$${(value / 1000000).toFixed(1)}M`;
+    } else if (value >= 1000) {
+      return `$${(value / 1000).toFixed(0)}K`;
+    }
+    return `$${value}`;
+  };
+
+  const formatYAxisTick = (value) => {
+    if (activePerformanceChart === 'active_clients' || activePerformanceChart === 'new_clients') {
+      return value >= 1000 ? `${(value / 1000).toFixed(0)}K` : value;
+    }
+    return formatCurrency(value);
+  };
+
+  const CustomPerformanceTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      // Calculate total for the month (excluding Inactive since they're always 0)
+      const monthTotal = payload
+        .filter(entry => entry.dataKey !== 'inactive')
+        .reduce((sum, entry) => sum + entry.value, 0);
+
+      // Format total for display
+      let formattedTotal;
+      if (activePerformanceChart === 'active_clients' || activePerformanceChart === 'new_clients') {
+        formattedTotal = formatNumber(monthTotal, true);
+      } else {
+        formattedTotal = formatCurrency(monthTotal);
+      }
+
+      // Define tier order from top to bottom (matching visual stacking: PGSB)
+      const tierOrder = ['platinum', 'gold', 'silver', 'bronze'];
+      
+      // Sort payload according to visual stacking order
+      const sortedPayload = payload
+        .filter(entry => entry.dataKey !== 'inactive')
+        .sort((a, b) => {
+          const aIndex = tierOrder.indexOf(a.dataKey);
+          const bIndex = tierOrder.indexOf(b.dataKey);
+          return aIndex - bIndex;
+        });
+
+      return (
+        <div className="custom-tooltip">
+          <p className="tooltip-label">{`Month: ${label} | Total: ${formattedTotal}`}</p>
+          {sortedPayload.map((entry, index) => {
+            const tierName = entry.dataKey.charAt(0).toUpperCase() + entry.dataKey.slice(1);
+            let formattedValue;
+            
+            if (activePerformanceChart === 'active_clients' || activePerformanceChart === 'new_clients') {
+              formattedValue = formatNumber(entry.value, true);
+            } else {
+              formattedValue = formatCurrency(entry.value);
+            }
+            
+            // Calculate percentage of total for this month
+            const percentage = monthTotal > 0 ? ((entry.value / monthTotal) * 100).toFixed(1) : '0.0';
+            
+            return (
+              <p key={index} style={{ color: entry.color }}>
+                {`${tierName}: ${formattedValue} (${percentage}%)`}
+              </p>
+            );
+          })}
+        </div>
+      );
+    }
+    return null;
+  };
 
   // Helper functions
   const formatPercentage = (value) => `${(value || 0).toFixed(1)}%`;
@@ -667,6 +799,205 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
 
         {(selectedCountry || selectedRegion) && (
           <>
+                         {/* Monthly Performance Trends Section */}
+             <div className="section-divider">
+               <h3 className="section-title">Monthly Performance Trends - {selectedCountry || selectedRegion}</h3>
+               <p className="section-subtitle">Monthly performance trends per tier with commission, revenue and active clients distribution</p>
+             </div>
+
+             {tierLoading ? (
+               <div className="loading-state">Loading monthly performance trends...</div>
+             ) : tierAnalyticsData?.monthly_tier_data ? (
+               <div className="performance-trends-section">
+                 {/* Chart Controls */}
+                 <div className="performance-chart-controls">
+                   <div className="chart-tabs compact">
+                     <button 
+                       className={`chart-tab ${activePerformanceChart === 'company_revenue' ? 'active' : ''}`}
+                       onClick={() => setActivePerformanceChart('company_revenue')}
+                     >
+                       Company Revenue
+                     </button>
+                     <button 
+                       className={`chart-tab ${activePerformanceChart === 'total_earnings' ? 'active' : ''}`}
+                       onClick={() => setActivePerformanceChart('total_earnings')}
+                     >
+                       Partner Earnings
+                     </button>
+                     <button 
+                       className={`chart-tab ${activePerformanceChart === 'active_clients' ? 'active' : ''}`}
+                       onClick={() => setActivePerformanceChart('active_clients')}
+                     >
+                       Active Clients
+                     </button>
+                     <button 
+                       className={`chart-tab ${activePerformanceChart === 'new_clients' ? 'active' : ''}`}
+                       onClick={() => setActivePerformanceChart('new_clients')}
+                     >
+                       New Clients
+                     </button>
+                     <button 
+                       className={`chart-tab ${activePerformanceChart === 'total_deposits' ? 'active' : ''}`}
+                       onClick={() => setActivePerformanceChart('total_deposits')}
+                     >
+                       Total Deposits
+                     </button>
+                   </div>
+                 </div>
+
+                 {/* Chart Display */}
+                 <div className="performance-chart-container compact">
+                   <div className="chart-header">
+                     <h4 className="chart-title">{getPerformanceChartTitle()}</h4>
+                   </div>
+                   <div className="chart-content">
+                     <ResponsiveContainer width="100%" height={250}>
+                       <BarChart 
+                         data={formatChartData()} 
+                         margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                         barCategoryGap="20%"
+                       >
+                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                         <XAxis 
+                           dataKey="month" 
+                           tick={{ fontSize: 11, fill: '#6b7280' }}
+                           tickLine={{ stroke: '#d1d5db' }}
+                         />
+                         <YAxis 
+                           tick={{ fontSize: 11, fill: '#6b7280' }}
+                           tickLine={{ stroke: '#d1d5db' }}
+                           tickFormatter={formatYAxisTick}
+                         />
+                         <Tooltip content={<CustomPerformanceTooltip />} />
+                         <Bar dataKey="platinum" stackId="a" fill="#E5E7EB" name="Platinum" />
+                         <Bar dataKey="gold" stackId="a" fill="#FCD34D" name="Gold" />
+                         <Bar dataKey="silver" stackId="a" fill="#9CA3AF" name="Silver" />
+                         <Bar dataKey="bronze" stackId="a" fill="#F97316" name="Bronze" />
+                       </BarChart>
+                     </ResponsiveContainer>
+                   </div>
+                 </div>
+
+                                   {/* Commission, Revenue and Active Clients Distribution Bars */}
+                  <div className="performance-distribution-section">
+                    <div className="stacked-charts compact">
+                      {(() => {
+                        if (!tierAnalyticsData?.monthly_tier_data || !tierAnalyticsData?.available_months) {
+                          return null;
+                        }
+
+                        const months = tierAnalyticsData.available_months;
+                        const totals = {
+                          revenue: { platinum: 0, gold: 0, silver: 0, bronze: 0 },
+                          earnings: { platinum: 0, gold: 0, silver: 0, bronze: 0 },
+                          clients: { platinum: 0, gold: 0, silver: 0, bronze: 0 }
+                        };
+
+                        // Sum up values across all months for each tier
+                        months.forEach(month => {
+                          const monthData = tierAnalyticsData.monthly_tier_data[month] || {};
+                          const tiers = ['Platinum', 'Gold', 'Silver', 'Bronze'];
+                          
+                          tiers.forEach(tier => {
+                            const tierData = monthData[tier] || {};
+                            const tierKey = tier.toLowerCase();
+                            
+                            totals.revenue[tierKey] += tierData.revenue || 0;
+                            totals.earnings[tierKey] += tierData.earnings || 0;
+                            totals.clients[tierKey] += tierData.active_clients || 0;
+                          });
+                        });
+
+                        // Calculate percentages and create distribution bars
+                        const calculatePercentages = (data) => {
+                          const total = Object.values(data).reduce((sum, val) => sum + val, 0);
+                          const percentages = {};
+                          Object.keys(data).forEach(tier => {
+                            percentages[tier] = total > 0 ? (data[tier] / total) * 100 : 0;
+                          });
+                          return { percentages, total };
+                        };
+
+                        const revenueResult = calculatePercentages(totals.revenue);
+                        const earningsResult = calculatePercentages(totals.earnings);
+                        const clientsResult = calculatePercentages(totals.clients);
+
+                        return (
+                          <>
+                            <div className="stacked-chart compact">
+                              <div className="stacked-chart-header">
+                                <span className="stacked-chart-label">Commission Distribution</span>
+                                <span className="stacked-chart-total">{formatCurrency(earningsResult.total)}</span>
+                              </div>
+                              <div className="stacked-bar">
+                                {['platinum', 'gold', 'silver', 'bronze'].map(tier => (
+                                  <div 
+                                    key={tier}
+                                    className={`stacked-segment tier-${tier}`}
+                                    style={{ width: `${earningsResult.percentages[tier]}%` }}
+                                    title={`${tier.charAt(0).toUpperCase() + tier.slice(1)}: ${formatCurrency(totals.earnings[tier])} (${earningsResult.percentages[tier].toFixed(1)}%)`}
+                                  >
+                                    {earningsResult.percentages[tier] > 8 && (
+                                      <span className="segment-label">{earningsResult.percentages[tier].toFixed(1)}%</span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="stacked-chart compact">
+                              <div className="stacked-chart-header">
+                                <span className="stacked-chart-label">Revenue Distribution</span>
+                                <span className="stacked-chart-total">{formatCurrency(revenueResult.total)}</span>
+                              </div>
+                              <div className="stacked-bar">
+                                {['platinum', 'gold', 'silver', 'bronze'].map(tier => (
+                                  <div 
+                                    key={tier}
+                                    className={`stacked-segment tier-${tier}`}
+                                    style={{ width: `${revenueResult.percentages[tier]}%` }}
+                                    title={`${tier.charAt(0).toUpperCase() + tier.slice(1)}: ${formatCurrency(totals.revenue[tier])} (${revenueResult.percentages[tier].toFixed(1)}%)`}
+                                  >
+                                    {revenueResult.percentages[tier] > 8 && (
+                                      <span className="segment-label">{revenueResult.percentages[tier].toFixed(1)}%</span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="stacked-chart compact">
+                              <div className="stacked-chart-header">
+                                <span className="stacked-chart-label">Active Clients Distribution</span>
+                                <span className="stacked-chart-total">{formatNumber(clientsResult.total)}</span>
+                              </div>
+                              <div className="stacked-bar">
+                                {['platinum', 'gold', 'silver', 'bronze'].map(tier => (
+                                  <div 
+                                    key={tier}
+                                    className={`stacked-segment tier-${tier}`}
+                                    style={{ width: `${clientsResult.percentages[tier]}%` }}
+                                    title={`${tier.charAt(0).toUpperCase() + tier.slice(1)}: ${formatNumber(totals.clients[tier])} (${clientsResult.percentages[tier].toFixed(1)}%)`}
+                                  >
+                                    {clientsResult.percentages[tier] > 8 && (
+                                      <span className="segment-label">{clientsResult.percentages[tier].toFixed(1)}%</span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+               </div>
+             ) : (
+               <div className="empty-state">
+                 <p>No performance data available for the selected country/region.</p>
+               </div>
+             )}
+
             {/* Tier Analytics Section */}
             <div className="section-divider">
               <h3 className="section-title">Tier Analytics - {selectedCountry || selectedRegion}</h3>

@@ -4577,3 +4577,146 @@ body {
 .loading-content > div[style*='background: white'] {
   box-shadow: 0 8px 32px 0 rgba(0,0,0,0.06) !important;
 }
+
+/* Compact Performance Trends Styles */
+.performance-trends-section {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+}
+
+.performance-chart-controls {
+  margin-bottom: 1rem;
+}
+
+.chart-tabs.compact {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.chart-tabs.compact .chart-tab {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  border-radius: var(--radius-sm);
+}
+
+.performance-chart-container.compact {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1rem;
+}
+
+.performance-chart-container.compact .chart-header {
+  margin-bottom: 0.75rem;
+}
+
+.performance-chart-container.compact .chart-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.performance-distribution-section {
+  margin-top: 1rem;
+}
+
+.stacked-charts.compact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.stacked-chart.compact {
+  padding: 0.875rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.stacked-chart.compact:hover {
+  box-shadow: var(--shadow-md);
+  transform: none;
+}
+
+.stacked-chart.compact .stacked-chart-header {
+  margin-bottom: 0.375rem;
+}
+
+.stacked-chart.compact .stacked-chart-label {
+  font-size: 0.8125rem;
+}
+
+.stacked-chart.compact .stacked-chart-total {
+  font-size: 0.75rem;
+}
+
+.stacked-chart.compact .stacked-bar {
+  height: 20px;
+  margin-bottom: 0;
+}
+
+.stacked-chart.compact .segment-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Custom tooltip styles for compact charts */
+.performance-trends-section .custom-tooltip {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  box-shadow: var(--shadow-lg);
+  font-size: 0.8125rem;
+  max-width: 300px;
+}
+
+.performance-trends-section .tooltip-label {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--border-light);
+}
+
+/* Responsive adjustments for compact performance trends */
+@media (max-width: 768px) {
+  .performance-trends-section {
+    padding: 0.75rem;
+  }
+  
+  .chart-tabs.compact {
+    gap: 0.25rem;
+  }
+  
+  .chart-tabs.compact .chart-tab {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
+  
+  .performance-chart-container.compact {
+    padding: 0.75rem;
+  }
+  
+  .stacked-chart.compact {
+    padding: 0.75rem;
+  }
+}
+
+/* Tab Content Persistence Styles */
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}

@@ -64,37 +64,37 @@ const Dashboard = ({
 
       {/* Tab Content */}
       <div className="dashboard-content">
-        {activeTab === 'overview' && (
-          <>
-            {/* Overview Section */}
-            {overview && (
-              <section className="overview-section">
-                <div className="section-header">
-                  <h2 className="heading-lg">Partner Overview</h2>
-                  <p className="text-secondary">Real-time partner performance metrics</p>
-                </div>
-                <PartnerOverview 
-                  overview={overview} 
-                  formatCurrency={formatCurrency}
-                  formatNumber={formatNumber}
-                />
-              </section>
-            )}
-
-            {/* Performance Analytics Section */}
-            <section className="performance-analytics-section">
-              <PerformanceAnalytics 
-                analytics={tierAnalytics}
+        {/* Overview Tab */}
+        <div className={`tab-content ${activeTab === 'overview' ? 'active' : ''}`}>
+          {/* Overview Section */}
+          {overview && (
+            <section className="overview-section">
+              <div className="section-header">
+                <h2 className="heading-lg">Partner Overview</h2>
+                <p className="text-secondary">Real-time partner performance metrics</p>
+              </div>
+              <PartnerOverview 
+                overview={overview} 
                 formatCurrency={formatCurrency}
                 formatNumber={formatNumber}
-                formatVolume={formatVolume}
-                mainLoading={loading}
               />
             </section>
-          </>
-        )}
+          )}
 
-        {activeTab === 'funnel' && (
+          {/* Performance Analytics Section */}
+          <section className="performance-analytics-section">
+            <PerformanceAnalytics 
+              analytics={tierAnalytics}
+              formatCurrency={formatCurrency}
+              formatNumber={formatNumber}
+              formatVolume={formatVolume}
+              mainLoading={loading}
+            />
+          </section>
+        </div>
+
+        {/* Application Funnel Tab */}
+        <div className={`tab-content ${activeTab === 'funnel' ? 'active' : ''}`}>
           <section className="application-funnel-section">
             <ApplicationFunnel 
               formatNumber={formatNumber}
@@ -105,9 +105,10 @@ const Dashboard = ({
               availableRegions={availableRegions}
             />
           </section>
-        )}
+        </div>
 
-        {activeTab === 'management' && (
+        {/* Partner Management Tab */}
+        <div className={`tab-content ${activeTab === 'management' ? 'active' : ''}`}>
           <section className="partners-section">
             <div className="section-header">
               <h2 className="heading-lg">Partner Management</h2>
@@ -146,7 +147,7 @@ const Dashboard = ({
               />
             </div>
           </section>
-        )}
+        </div>
       </div>
 
       {/* AI Copilot for Dashboard Insights - Always visible */}
