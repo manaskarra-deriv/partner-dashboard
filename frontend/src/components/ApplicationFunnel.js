@@ -583,7 +583,7 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
                   <tr key={`totals-${month}-${index}`}>
                     <td style={{textAlign: 'left'}}><strong>{month}</strong></td>
                     <td style={{textAlign: 'center'}}>
-                      <div style={{fontWeight: 'bold'}}>{formatNumber(totalActivePartnersCount)}</div>
+                      <div style={{fontWeight: 'bold'}}>{totalActivePartnersCount.toLocaleString()}</div>
                       {monthlyRanks.partners_rank && (
                         <div style={{fontSize: '0.75rem', color: '#666'}}>#{monthlyRanks.partners_rank}</div>
                       )}
@@ -687,7 +687,7 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
                 <tr key={`detail-${month}-${index}`}>
                   <td style={{textAlign: 'left'}}><strong>{month}</strong></td>
                   <td style={{textAlign: 'center'}}>
-                    <div style={{fontWeight: 'bold'}}>{formatNumber(partnersCount)}</div>
+                    <div style={{fontWeight: 'bold'}}>{partnersCount.toLocaleString()}</div>
                     {monthlyRanks.partners_rank && (
                       <div style={{fontSize: '0.75rem', color: '#666'}}>#{monthlyRanks.partners_rank}</div>
                     )}
@@ -1034,7 +1034,7 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
                 return (
                       <>
                         <div className="summary-card">
-                          <div className="summary-value">{formatNumber(summaryData.total_active_partners || 0)}</div>
+                          <div className="summary-value">{(summaryData.total_active_partners || 0).toLocaleString()}</div>
                           <div className="summary-label">
                             {selectedTierFilter === 'all' ? 'Active Partners' : `${selectedTierFilter} Partners`}
                           </div>
