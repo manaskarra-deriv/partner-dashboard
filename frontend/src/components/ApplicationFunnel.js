@@ -869,10 +869,10 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
                            tickFormatter={formatYAxisTick}
                          />
                          <Tooltip content={<CustomPerformanceTooltip />} />
-                         <Bar dataKey="platinum" stackId="a" fill="#E5E7EB" name="Platinum" />
-                         <Bar dataKey="gold" stackId="a" fill="#FCD34D" name="Gold" />
-                         <Bar dataKey="silver" stackId="a" fill="#9CA3AF" name="Silver" />
                          <Bar dataKey="bronze" stackId="a" fill="#F97316" name="Bronze" />
+                         <Bar dataKey="silver" stackId="a" fill="#9CA3AF" name="Silver" />
+                         <Bar dataKey="gold" stackId="a" fill="#FCD34D" name="Gold" />
+                         <Bar dataKey="platinum" stackId="a" fill="#E5E7EB" name="Platinum" />
                        </BarChart>
                      </ResponsiveContainer>
                    </div>
@@ -937,7 +937,7 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
                                     style={{ width: `${earningsResult.percentages[tier]}%` }}
                                     title={`${tier.charAt(0).toUpperCase() + tier.slice(1)}: ${formatCurrency(totals.earnings[tier])} (${earningsResult.percentages[tier].toFixed(1)}%)`}
                                   >
-                                    {earningsResult.percentages[tier] > 8 && (
+                                    {earningsResult.percentages[tier] > 5 && (
                                       <span className="segment-label">{earningsResult.percentages[tier].toFixed(1)}%</span>
                                     )}
                                   </div>
@@ -958,7 +958,7 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
                                     style={{ width: `${revenueResult.percentages[tier]}%` }}
                                     title={`${tier.charAt(0).toUpperCase() + tier.slice(1)}: ${formatCurrency(totals.revenue[tier])} (${revenueResult.percentages[tier].toFixed(1)}%)`}
                                   >
-                                    {revenueResult.percentages[tier] > 8 && (
+                                    {revenueResult.percentages[tier] > 5 && (
                                       <span className="segment-label">{revenueResult.percentages[tier].toFixed(1)}%</span>
                                     )}
                                   </div>
@@ -979,7 +979,7 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
                                     style={{ width: `${clientsResult.percentages[tier]}%` }}
                                     title={`${tier.charAt(0).toUpperCase() + tier.slice(1)}: ${formatNumber(totals.clients[tier])} (${clientsResult.percentages[tier].toFixed(1)}%)`}
                                   >
-                                    {clientsResult.percentages[tier] > 8 && (
+                                    {clientsResult.percentages[tier] > 5 && (
                                       <span className="segment-label">{clientsResult.percentages[tier].toFixed(1)}%</span>
                                     )}
                                   </div>
