@@ -44,6 +44,7 @@ OPENAI_MODEL_NAME = os.getenv('OPENAI_MODEL_NAME')
 # Global variables for data
 partner_data = None
 csv_files_loaded = False
+tier_analytics_cache = {}  # Cache for pre-calculated tier analytics
 
 def load_csv_data():
     """Load partner data from CSV files"""
@@ -155,9 +156,54 @@ def standardize_data():
         
         logger.info(f"Data standardization completed. {len(inactive_partners)} partners marked as Inactive (0 earnings)")
         
+        # Pre-calculate tier analytics for performance
+        pre_calculate_tier_analytics()
+        
     except Exception as e:
         logger.error(f"Error standardizing data: {str(e)}")
         raise e
+
+def pre_calculate_tier_analytics():
+    """Pre-calculate tier analytics for common countries and regions during data load"""
+    global tier_analytics_cache, partner_data
+    
+    if partner_data is None:
+        logger.error("Cannot pre-calculate tier analytics: partner_data is None")
+        return
+    
+    logger.info("Starting pre-calculation of tier analytics for top countries and regions...")
+    start_time = datetime.now()
+    
+    try:
+        # Get top countries by partner count for pre-calculation
+        top_countries = partner_data['country'].value_counts().head(20).index.tolist()
+        all_regions = get_all_regions()
+        
+        # Pre-calculate for top countries
+        for country in top_countries:
+            if pd.notna(country):
+                try:
+                    cache_key = f"country:{country}"
+                    # We'll store a flag for now and do actual calculation on first request
+                    tier_analytics_cache[cache_key] = "pending"
+                except Exception as e:
+                    logger.error(f"Error marking country {country} for pre-calculation: {str(e)}")
+        
+        # Pre-calculate for all regions  
+        for region in all_regions:
+            try:
+                cache_key = f"region:{region}"
+                # We'll store a flag for now and do actual calculation on first request
+                tier_analytics_cache[cache_key] = "pending"
+            except Exception as e:
+                logger.error(f"Error marking region {region} for pre-calculation: {str(e)}")
+        
+        end_time = datetime.now()
+        duration = (end_time - start_time).total_seconds()
+        logger.info(f"Tier analytics pre-calculation setup completed in {duration:.2f} seconds. Marked {len(tier_analytics_cache)} entries for caching.")
+        
+    except Exception as e:
+        logger.error(f"Error during tier analytics pre-calculation setup: {str(e)}")
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -171,6 +217,11 @@ def health_check():
             'csv_loaded': csv_files_loaded,
             'partner_count': len(partner_data) if partner_data is not None else 0,
             'database': db_health,
+            'tier_analytics_cache': {
+                'enabled': True,
+                'cached_items': len(tier_analytics_cache),
+                'cache_keys': list(tier_analytics_cache.keys())[:10]  # Show first 10 for debugging
+            },
             'timestamp': datetime.now().isoformat()
         })
     except Exception as e:
@@ -1483,7 +1534,7 @@ signal.signal(signal.SIGINT, graceful_shutdown)
 
 @app.route('/api/country-tier-analytics', methods=['GET'])
 def get_country_tier_analytics():
-    """Get comprehensive tier analytics for a specific country or region using CSV data for countries and Supabase data for regions"""
+    """Get comprehensive tier analytics for a specific country or region using caching for performance"""
     try:
         if partner_data is None:
             return jsonify({'error': 'No data available'}), 400
@@ -1499,6 +1550,24 @@ def get_country_tier_analytics():
         
         if not country and not region:
             return jsonify({'error': 'Either country or region parameter is required'}), 400
+        
+        # Check cache first
+        cache_key = f"country:{country}" if country else f"region:{region}"
+        
+        # If we have cached data that's not just "pending", return it
+        if cache_key in tier_analytics_cache and tier_analytics_cache[cache_key] != "pending":
+            logger.info(f"Serving tier analytics from cache for {cache_key}")
+            return jsonify({
+                'success': True,
+                'data': tier_analytics_cache[cache_key],
+                'country': country,
+                'region': region,
+                'cached': True
+            })
+        
+        # Calculate and cache for future requests
+        logger.info(f"Calculating and caching tier analytics for {cache_key}")
+        start_time = datetime.now()
         
         # For regions, use hardcoded mapping to get countries in that region
         if region:
@@ -2486,11 +2555,20 @@ def get_country_tier_analytics():
             'global_totals': global_totals
         }
         
+        # Cache the result for future requests
+        tier_analytics_cache[cache_key] = analytics_data
+        
+        end_time = datetime.now()
+        duration = (end_time - start_time).total_seconds()
+        logger.info(f"Calculated and cached tier analytics for {cache_key} in {duration:.2f} seconds")
+        
         return jsonify({
             'success': True,
             'data': analytics_data,
             'country': country,
-            'region': region
+            'region': region,
+            'cached': False,
+            'calculation_time': duration
         })
         
     except Exception as e:
