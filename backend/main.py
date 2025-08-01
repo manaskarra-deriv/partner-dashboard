@@ -44,7 +44,6 @@ OPENAI_MODEL_NAME = os.getenv('OPENAI_MODEL_NAME')
 # Global variables for data
 partner_data = None
 csv_files_loaded = False
-tier_analytics_cache = {}  # Cache for pre-calculated tier analytics
 
 def load_csv_data():
     """Load partner data from CSV files"""
@@ -156,362 +155,9 @@ def standardize_data():
         
         logger.info(f"Data standardization completed. {len(inactive_partners)} partners marked as Inactive (0 earnings)")
         
-        # Pre-calculate tier analytics for performance
-        pre_calculate_tier_analytics()
-        
     except Exception as e:
         logger.error(f"Error standardizing data: {str(e)}")
         raise e
-
-def pre_calculate_tier_analytics():
-    """Pre-calculate tier analytics with proper rankings for all countries and regions during data load"""
-    global tier_analytics_cache, partner_data
-    
-    if partner_data is None:
-        logger.error("Cannot pre-calculate tier analytics: partner_data is None")
-        return
-    
-    logger.info("🏆 Starting FULL pre-calculation with rankings for ALL countries and regions...")
-    start_time = datetime.now()
-    
-    try:
-        # Get ALL countries for pre-calculation (complete coverage)
-        all_countries = partner_data['country'].dropna().unique().tolist()
-        all_regions = get_all_regions()
-        
-        logger.info(f"Found {len(all_countries)} countries and {len(all_regions)} regions in dataset")
-        
-        # STEP 1: Calculate base data for all countries (without rankings)
-        logger.info("📊 Step 1: Calculating base data for all countries...")
-        country_base_data = {}
-        for i, country in enumerate(all_countries):
-            if pd.notna(country):
-                try:
-                    # Get base analytics without cross-country rankings
-                    base_data = calculate_tier_analytics_internal(country=country)
-                    country_base_data[country] = base_data
-                    
-                    if i <= 4 or (i + 1) % 10 == 0:
-                        logger.info(f"✅ Base data calculated for {country} ({i + 1}/{len(all_countries)})")
-                        
-                except Exception as e:
-                    logger.error(f"❌ Error calculating base data for {country}: {str(e)}")
-        
-        # STEP 2: Calculate base data for all regions  
-        logger.info("🌍 Step 2: Calculating base data for all regions...")
-        region_base_data = {}
-        for i, region in enumerate(all_regions):
-            try:
-                # Get base analytics without cross-region rankings
-                base_data = calculate_tier_analytics_internal(region=region)
-                region_base_data[region] = base_data
-                logger.info(f"✅ Base data calculated for {region} ({i + 1}/{len(all_regions)})")
-                
-            except Exception as e:
-                logger.error(f"❌ Error calculating base data for {region}: {str(e)}")
-        
-        # STEP 3: Calculate global rankings (this is what was missing!)
-        logger.info("🏅 Step 3: Calculating global country and tier rankings...")
-        global_rankings = calculate_global_rankings(country_base_data, region_base_data)
-        
-        # STEP 4: Cache complete data with rankings for each country
-        logger.info("💾 Step 4: Caching complete data with rankings...")
-        for country, base_data in country_base_data.items():
-            try:
-                cache_key = f"country:{country}"
-                complete_data = base_data.copy()
-                # Add the global rankings that compare this country to others
-                complete_data['country_rankings'] = global_rankings.get('country_rankings', {}).get(country, {})
-                complete_data['tier_country_rankings'] = global_rankings.get('tier_country_rankings', {})
-                complete_data['monthly_rankings'] = global_rankings.get('monthly_rankings', {}).get(country, {})
-                tier_analytics_cache[cache_key] = complete_data
-                
-            except Exception as e:
-                logger.error(f"❌ Failed to cache complete data for {country}: {str(e)}")
-        
-        # STEP 5: Cache complete data with rankings for each region
-        for region, base_data in region_base_data.items():
-            try:
-                cache_key = f"region:{region}"
-                complete_data = base_data.copy()
-                # Add the global rankings that compare this region to others
-                complete_data['country_rankings'] = global_rankings.get('region_rankings', {}).get(region, {})
-                complete_data['tier_country_rankings'] = global_rankings.get('tier_region_rankings', {})
-                complete_data['monthly_rankings'] = global_rankings.get('monthly_region_rankings', {}).get(region, {})
-                tier_analytics_cache[cache_key] = complete_data
-                
-            except Exception as e:
-                logger.error(f"❌ Failed to cache complete data for {region}: {str(e)}")
-        
-        end_time = datetime.now()
-        duration = (end_time - start_time).total_seconds()
-        total_items = len(all_countries) + len(all_regions)
-        successful_items = len([v for v in tier_analytics_cache.values() if v != "pending"])
-        logger.info(f"🎉 Tier analytics pre-calculation completed in {duration:.2f} seconds. Successfully cached {successful_items}/{total_items} locations.")
-        
-    except Exception as e:
-        logger.error(f"Error during tier analytics pre-calculation: {str(e)}")
-
-def calculate_global_rankings(country_base_data, region_base_data):
-    """Calculate global rankings that compare all countries and regions to each other"""
-    try:
-        logger.info("🔢 Calculating global rankings across all countries and regions...")
-        
-        # Initialize ranking structures
-        global_rankings = {
-            'country_rankings': {},
-            'tier_country_rankings': {},
-            'monthly_rankings': {},
-            'region_rankings': {},
-            'tier_region_rankings': {},
-            'monthly_region_rankings': {}
-        }
-        
-        # STEP 1: Calculate country rankings (comparing countries to countries)
-        country_summaries = []
-        for country, data in country_base_data.items():
-            summary = data.get('summary', {})
-            if summary:
-                country_summaries.append({
-                    'country': country,
-                    'total_earnings': summary.get('total_earnings', 0),
-                    'total_revenue': summary.get('total_revenue', 0),
-                    'total_deposits': summary.get('total_deposits', 0),
-                    'active_clients': summary.get('active_clients', 0),
-                    'new_clients': summary.get('new_clients', 0),
-                    'partners_count': summary.get('partners_count', 0)
-                })
-        
-        # Sort and rank countries
-        if country_summaries:
-            # Rankings by earnings
-            earnings_sorted = sorted(country_summaries, key=lambda x: x['total_earnings'], reverse=True)
-            earnings_rank_map = {item['country']: idx + 1 for idx, item in enumerate(earnings_sorted)}
-            
-            # Rankings by revenue  
-            revenue_sorted = sorted(country_summaries, key=lambda x: x['total_revenue'], reverse=True)
-            revenue_rank_map = {item['country']: idx + 1 for idx, item in enumerate(revenue_sorted)}
-            
-            # Rankings by deposits
-            deposits_sorted = sorted(country_summaries, key=lambda x: x['total_deposits'], reverse=True)
-            deposits_rank_map = {item['country']: idx + 1 for idx, item in enumerate(deposits_sorted)}
-            
-            # Rankings by partners count
-            partners_sorted = sorted(country_summaries, key=lambda x: x['partners_count'], reverse=True)
-            partners_rank_map = {item['country']: idx + 1 for idx, item in enumerate(partners_sorted)}
-            
-            # Store country rankings
-            for country in country_base_data.keys():
-                global_rankings['country_rankings'][country] = {
-                    'earnings_rank': earnings_rank_map.get(country, len(country_summaries) + 1),
-                    'revenue_rank': revenue_rank_map.get(country, len(country_summaries) + 1),
-                    'deposits_rank': deposits_rank_map.get(country, len(country_summaries) + 1),
-                    'partners_rank': partners_rank_map.get(country, len(country_summaries) + 1),
-                    'total_countries': len(country_summaries)
-                }
-        
-        # STEP 2: Calculate tier-specific rankings
-        tiers = ['Platinum', 'Gold', 'Silver', 'Bronze', 'Inactive']
-        tier_country_rankings = {}
-        
-        for tier in tiers:
-            tier_countries = []
-            for country, data in country_base_data.items():
-                monthly_data = data.get('monthly_tier_data', {})
-                # Get latest month data for this tier
-                if monthly_data:
-                    latest_month = list(monthly_data.keys())[-1] if monthly_data else None
-                    if latest_month and tier in monthly_data[latest_month]:
-                        tier_data = monthly_data[latest_month][tier]
-                        tier_countries.append({
-                            'country': country,
-                            'earnings': tier_data.get('earnings', 0),
-                            'revenue': tier_data.get('revenue', 0),
-                            'partners': tier_data.get('partners', 0)
-                        })
-            
-            if tier_countries:
-                # Sort by earnings for this tier
-                tier_sorted = sorted(tier_countries, key=lambda x: x['earnings'], reverse=True)
-                tier_country_rankings[tier] = {
-                    'top_countries': [
-                        {
-                            'country': item['country'],
-                            'earnings': item['earnings'],
-                            'revenue': item['revenue'],
-                            'partners': item['partners'],
-                            'rank': idx + 1
-                        }
-                        for idx, item in enumerate(tier_sorted[:10])  # Top 10
-                    ]
-                }
-        
-        global_rankings['tier_country_rankings'] = tier_country_rankings
-        
-        logger.info(f"✅ Global rankings calculated for {len(country_base_data)} countries and {len(region_base_data)} regions")
-        return global_rankings
-        
-    except Exception as e:
-        logger.error(f"❌ Error calculating global rankings: {str(e)}")
-        return {}
-
-def calculate_tier_analytics_internal(country=None, region=None):
-    """Internal function to calculate tier analytics - extracted from endpoint logic"""
-    global partner_data
-    
-    if partner_data is None:
-        raise ValueError('No data available')
-    
-    # Handle URL encoding where + should become spaces
-    if region:
-        region = region.replace('+', ' ')
-    if country:
-        country = country.replace('+', ' ')
-    
-    if not country and not region:
-        raise ValueError('Either country or region parameter is required')
-    
-    # For regions, use hardcoded mapping to get countries in that region
-    if region:
-        # Get countries that belong to this region from hardcoded mapping
-        region_countries = get_countries_for_region(region)
-        
-        if not region_countries:
-            return {
-                'summary': {},
-                'monthly_tier_data': {},
-                'tier_country_rankings': {},
-                'country_rankings': {},
-                'available_months': []
-            }
-        
-        # Filter CSV data by countries in this region
-        filtered_data = partner_data[partner_data['country'].isin(region_countries)].copy()
-    else:
-        # Filter CSV data by country
-        filtered_data = partner_data[partner_data['country'] == country].copy()
-    
-    if filtered_data.empty:
-        return {
-            'summary': {},
-            'monthly_tier_data': {},
-            'tier_country_rankings': {},
-            'country_rankings': {},
-            'available_months': []
-        }
-    
-    # Get each partner's latest tier for consistent grouping
-    partner_latest_tier = filtered_data.groupby('partner_id')['partner_tier'].last().reset_index()
-    partner_latest_tier.columns = ['partner_id', 'current_tier']
-    
-    # Merge current tier back to all monthly data for consistent grouping
-    monthly_data_with_current_tier = filtered_data.merge(partner_latest_tier, on='partner_id')
-    
-    # Get monthly data by current tier
-    monthly_tier_data = monthly_data_with_current_tier.groupby(['month', 'current_tier']).agg({
-        'partner_id': 'nunique',
-        'total_earnings': 'sum',
-        'company_revenue': 'sum',
-        'total_deposits': 'sum',
-        'active_clients': 'sum',
-        'new_active_clients': 'sum',
-        'volume_usd': 'sum'
-    }).reset_index()
-    
-    # Rename for consistency
-    monthly_tier_data = monthly_tier_data.rename(columns={'current_tier': 'partner_tier'})
-    
-    # Sort by month descending first (latest to earliest) and keep original date for sorting
-    monthly_tier_data = monthly_tier_data.sort_values('month', ascending=False)
-    
-    # Create a month sorting reference before converting to string
-    month_order = monthly_tier_data['month'].dt.to_period('M').drop_duplicates().sort_values(ascending=False)
-    month_order_list = [period.strftime('%b %Y') for period in month_order]
-    
-    # Convert month to string for JSON serialization
-    monthly_tier_data['month'] = monthly_tier_data['month'].dt.strftime('%b %Y')
-    
-    # Get overall totals by tier
-    unique_partners = filtered_data.groupby('partner_id').agg({
-        'partner_tier': 'last',
-        'total_earnings': 'sum',
-        'company_revenue': 'sum',
-        'total_deposits': 'sum',
-        'active_clients': 'last',
-        'new_active_clients': 'sum'
-    }).reset_index()
-    
-    tier_totals = unique_partners.groupby('partner_tier').agg({
-        'partner_id': 'count',
-        'total_earnings': 'sum',
-        'company_revenue': 'sum',
-        'total_deposits': 'sum',
-        'active_clients': 'sum',
-        'new_active_clients': 'sum'
-    }).reset_index()
-    
-    # Calculate overall summary
-    total_partners = tier_totals['partner_id'].sum()
-    # Calculate active partners (excluding Inactive tier)
-    active_tier_totals = tier_totals[tier_totals['partner_tier'] != 'Inactive']
-    total_active_partners = active_tier_totals['partner_id'].sum()
-    total_earnings = tier_totals['total_earnings'].sum()
-    total_company_revenue = tier_totals['company_revenue'].sum()
-    total_deposits = tier_totals['total_deposits'].sum()
-    total_clients = tier_totals['active_clients'].sum()
-    
-    # Format monthly tier data for frontend (preserve chronological order)
-    monthly_data = {}
-    for month_str in month_order_list:
-        monthly_data[month_str] = {}
-        month_data = monthly_tier_data[monthly_tier_data['month'] == month_str]
-        
-        for _, row in month_data.iterrows():
-            tier = row['partner_tier']
-            monthly_data[month_str][tier] = {
-                'partners': int(row['partner_id']),
-                'earnings': float(row['total_earnings']),
-                'revenue': float(row['company_revenue']),
-                'deposits': float(row['total_deposits']),
-                'active_clients': int(row['active_clients']),
-                'new_clients': int(row['new_active_clients']),
-                'volume': float(row['volume_usd'])
-            }
-    
-    # Create basic summary (without complex rankings for pre-calculation)
-    summary = {
-        'partner_country': country if country else None,
-        'partner_region': region if region else None,
-        'total_partners': int(total_partners),
-        'total_active_partners': int(total_active_partners),
-        'total_company_revenue': float(total_company_revenue),
-        'total_partner_earnings': float(total_earnings),
-        'total_deposits': float(total_deposits),
-        'total_new_clients': int(total_clients)
-    }
-    
-    # Calculate global totals for percentages
-    global_totals = {
-        'total_partners': int(total_partners),
-        'total_active_partners': int(total_active_partners), 
-        'total_earnings': float(total_earnings),
-        'total_company_revenue': float(total_company_revenue),
-        'total_deposits': float(total_deposits),
-        'total_clients': int(total_clients)
-    }
-    
-    analytics_data = {
-        'summary': summary,
-        'monthly_tier_data': monthly_data,
-        'tier_country_rankings': {},  # Simplified for pre-calculation
-        'monthly_rankings': {},  # Simplified for pre-calculation  
-        'tier_monthly_rankings': {},  # Simplified for pre-calculation
-        'country_rankings': {},  # Not applicable for single country view
-        'available_months': list(monthly_data.keys()) if monthly_data else [],
-        'global_totals': global_totals
-    }
-    
-    return analytics_data
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -525,11 +171,6 @@ def health_check():
             'csv_loaded': csv_files_loaded,
             'partner_count': len(partner_data) if partner_data is not None else 0,
             'database': db_health,
-            'tier_analytics_cache': {
-                'enabled': True,
-                'cached_items': len(tier_analytics_cache),
-                'cache_keys': list(tier_analytics_cache.keys())[:10]  # Show first 10 for debugging
-            },
             'timestamp': datetime.now().isoformat()
         })
     except Exception as e:
@@ -1842,7 +1483,7 @@ signal.signal(signal.SIGINT, graceful_shutdown)
 
 @app.route('/api/country-tier-analytics', methods=['GET'])
 def get_country_tier_analytics():
-    """Get comprehensive tier analytics for a specific country or region using caching for performance"""
+    """Get comprehensive tier analytics for a specific country or region using CSV data for countries and Supabase data for regions"""
     try:
         if partner_data is None:
             return jsonify({'error': 'No data available'}), 400
@@ -1858,24 +1499,6 @@ def get_country_tier_analytics():
         
         if not country and not region:
             return jsonify({'error': 'Either country or region parameter is required'}), 400
-        
-        # Check cache first
-        cache_key = f"country:{country}" if country else f"region:{region}"
-        
-        # If we have cached data that's not just "pending", return it
-        if cache_key in tier_analytics_cache and tier_analytics_cache[cache_key] != "pending" and isinstance(tier_analytics_cache[cache_key], dict):
-            logger.info(f"⚡ Serving tier analytics from cache for {cache_key}")
-            return jsonify({
-                'success': True,
-                'data': tier_analytics_cache[cache_key],
-                'country': country,
-                'region': region,
-                'cached': True
-            })
-        
-        # Calculate with full rankings and cache for future requests
-        logger.info(f"🔄 Calculating FULL tier analytics with rankings for {cache_key}")
-        start_time = datetime.now()
         
         # For regions, use hardcoded mapping to get countries in that region
         if region:
@@ -2863,20 +2486,11 @@ def get_country_tier_analytics():
             'global_totals': global_totals
         }
         
-        # Cache the result for future requests
-        tier_analytics_cache[cache_key] = analytics_data
-        
-        end_time = datetime.now()
-        duration = (end_time - start_time).total_seconds()
-        logger.info(f"Calculated and cached tier analytics for {cache_key} in {duration:.2f} seconds")
-        
         return jsonify({
             'success': True,
             'data': analytics_data,
             'country': country,
-            'region': region,
-            'cached': False,
-            'calculation_time': duration
+            'region': region
         })
         
     except Exception as e:
