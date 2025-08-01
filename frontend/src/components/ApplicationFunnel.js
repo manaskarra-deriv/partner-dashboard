@@ -26,7 +26,7 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
       return [];
     }
 
-    const months = tierAnalyticsData.available_months;
+    const months = [...tierAnalyticsData.available_months].reverse(); // Reverse to show newest on right
     const chartData = [];
 
     months.forEach(month => {
@@ -82,9 +82,9 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
     if (value >= 1000000) {
       return `$${(value / 1000000).toFixed(1)}M`;
     } else if (value >= 1000) {
-      return `$${(value / 1000).toFixed(0)}K`;
+      return `$${(value / 1000).toFixed(1)}K`;
     }
-    return `$${value}`;
+    return `$${Math.round(value)}`;
   };
 
   const formatYAxisTick = (value) => {
