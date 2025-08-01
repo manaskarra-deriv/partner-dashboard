@@ -24,6 +24,7 @@ const Dashboard = ({
   sortDirection,
   onSortChange,
   showPII,
+  onRequestPIIAccess,
   // Pagination props
   currentPage,
   totalPages,
@@ -154,6 +155,7 @@ const Dashboard = ({
                 onSortChange={onSortChange}
                 activeFilters={activeFilters}
                 showPII={showPII}
+                onRequestPIIAccess={onRequestPIIAccess}
                 // Pagination props
                 currentPage={currentPage}
                 totalPages={totalPages}

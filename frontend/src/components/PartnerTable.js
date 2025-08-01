@@ -14,6 +14,7 @@ const PartnerTable = ({
   onSortChange,
   activeFilters,
   showPII = true,
+  onRequestPIIAccess, // New prop for requesting PII access
   // Pagination props
   currentPage,
   totalPages,
@@ -256,10 +257,24 @@ const PartnerTable = ({
                 </td>
                 <td className="actions-cell">
                   <button 
-                    className="btn-sm btn-outline"
-                    onClick={() => onPartnerSelect(partner)}
+                    className={`btn-sm btn-outline ${!showPII ? 'btn-locked' : ''}`}
+                    onClick={() => {
+                      if (showPII) {
+                        onPartnerSelect(partner);
+                      } else if (onRequestPIIAccess) {
+                        onRequestPIIAccess(() => onPartnerSelect(partner));
+                      }
+                    }}
+                    disabled={!showPII && !onRequestPIIAccess}
+                    title={!showPII ? 'Enter password to unlock partner details' : 'View partner details'}
                   >
-                    View Details
+                    {!showPII ? (
+                      <>
+                        🔒 View Details
+                      </>
+                    ) : (
+                      'View Details'
+                    )}
                   </button>
                 </td>
               </tr>

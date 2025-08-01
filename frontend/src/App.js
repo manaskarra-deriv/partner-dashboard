@@ -36,6 +36,7 @@ function App() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [pendingAction, setPendingAction] = useState(null); // Store action to execute after password verification
 
   // Check if we're on a partner detail page
   const isPartnerDetailPage = location.pathname.startsWith('/partner/');
@@ -409,10 +410,21 @@ function App() {
       setShowPasswordModal(false);
       setPasswordInput("");
       setPasswordError("");
+      // Execute pending action if any
+      if (pendingAction) {
+        pendingAction();
+        setPendingAction(null);
+      }
     } else {
       setPasswordError('Incorrect password.');
     }
   }
+
+  // Add handler for requesting PII access
+  const handleRequestPIIAccess = (actionToExecute) => {
+    setPendingAction(() => actionToExecute);
+    setShowPasswordModal(true);
+  };
 
   if (error) {
     return (
@@ -450,7 +462,7 @@ function App() {
             />
             {passwordError && <div style={{ color: 'red', marginBottom: 8 }}>{passwordError}</div>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button onClick={() => { setShowPasswordModal(false); setPasswordInput(""); setPasswordError(""); }} style={{ padding: '6px 16px' }}>Cancel</button>
+              <button onClick={() => { setShowPasswordModal(false); setPasswordInput(""); setPasswordError(""); setPendingAction(null); }} style={{ padding: '6px 16px' }}>Cancel</button>
               <button onClick={handlePasswordSubmit} style={{ padding: '6px 16px' }}>Submit</button>
             </div>
           </div>
@@ -527,6 +539,7 @@ function App() {
               tierAnalyticsLoading={tierAnalyticsLoading}
               performanceAnalyticsData={performanceAnalyticsData}
               tierAnalyticsData={tierAnalyticsData}
+              onRequestPIIAccess={handleRequestPIIAccess}
             />
           } />
           <Route path="/partner/:partnerId" element={
