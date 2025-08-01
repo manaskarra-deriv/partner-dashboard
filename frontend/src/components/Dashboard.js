@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import PartnerOverview from './PartnerOverview';
 import PerformanceAnalytics from './PerformanceAnalytics';
+import TierAnalytics from './TierAnalytics';
 import ApplicationFunnel from './ApplicationFunnel';
 import PartnerTable from './PartnerTable';
 import PartnerFilters from './PartnerFilters';
@@ -11,7 +12,7 @@ const Dashboard = ({
   tierAnalytics,
   partners, 
   filters, 
-  activeFilters, 
+  activeFilters,
   loading, 
   onFilterChange, 
   onPartnerSelect,
@@ -33,7 +34,12 @@ const Dashboard = ({
   availableCountries,
   availableRegions,
   activeTab,
-  setActiveTab
+  setActiveTab,
+  // New separate loading states and data
+  performanceAnalyticsLoading,
+  tierAnalyticsLoading,
+  performanceAnalyticsData,
+  tierAnalyticsData
 }) => {
   // Use activeTab and setActiveTab from props
   return (
@@ -84,11 +90,22 @@ const Dashboard = ({
           {/* Performance Analytics Section */}
           <section className="performance-analytics-section">
             <PerformanceAnalytics 
-              analytics={tierAnalytics}
+              analytics={performanceAnalyticsData}
               formatCurrency={formatCurrency}
               formatNumber={formatNumber}
               formatVolume={formatVolume}
-              mainLoading={loading}
+              mainLoading={performanceAnalyticsLoading}
+            />
+          </section>
+
+          {/* Tier Analytics Section */}
+          <section className="tier-analytics-section">
+            <TierAnalytics 
+              analytics={tierAnalyticsData}
+              formatCurrency={formatCurrency}
+              formatNumber={formatNumber}
+              formatVolume={formatVolume}
+              mainLoading={tierAnalyticsLoading}
             />
           </section>
         </div>

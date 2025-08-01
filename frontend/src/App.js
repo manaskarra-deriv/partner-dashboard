@@ -49,6 +49,14 @@ function App() {
   const [availableRegions, setAvailableRegions] = useState([]);
   const [funnelInitialLoading, setFunnelInitialLoading] = useState(true);
 
+  // Separate loading states for performance analytics and tier analytics
+  const [performanceAnalyticsLoading, setPerformanceAnalyticsLoading] = useState(true);
+  const [tierAnalyticsLoading, setTierAnalyticsLoading] = useState(true);
+  
+  // Separate the data states
+  const [performanceAnalyticsData, setPerformanceAnalyticsData] = useState(null);
+  const [tierAnalyticsData, setTierAnalyticsData] = useState(null);
+
   // Add state for active tab
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -157,15 +165,37 @@ function App() {
   };
 
   const fetchTierAnalytics = async () => {
-    setFunnelLoading(true);
+    setPerformanceAnalyticsLoading(true);
+    setTierAnalyticsLoading(true);
     try {
       // Add cache busting parameter to ensure fresh data
       const cacheBuster = `?t=${Date.now()}`;
       const response = await axios.get(`${API_BASE_URL}/api/tier-analytics${cacheBuster}`);
-      setTierAnalytics(response.data);
+      const data = response.data;
+      
+      // Set performance analytics data (monthly_charts and totals)
+      const performanceData = {
+        monthly_charts: data.monthly_charts,
+        totals: data.totals
+      };
+      setPerformanceAnalyticsData(performanceData);
+      setPerformanceAnalyticsLoading(false);
+      
+      // Set tier analytics data (tier_summary and totals)
+      const tierData = {
+        tier_summary: data.tier_summary,
+        totals: data.totals
+      };
+      setTierAnalyticsData(tierData);
+      setTierAnalyticsLoading(false);
+      
+      // Keep the original tierAnalytics for backward compatibility
+      setTierAnalytics(data);
     } catch (err) {
       console.error('Error fetching tier analytics:', err);
-      setError('Failed to load application funnel');
+      setError('Failed to load tier analytics');
+      setPerformanceAnalyticsLoading(false);
+      setTierAnalyticsLoading(false);
     } finally {
       setFunnelLoading(false);
     }
@@ -197,9 +227,9 @@ function App() {
   };
 
   // Progress calculation for splash
-  const modulesLoaded = [!overviewLoading, !funnelLoading, !partnerMgmtLoading, !funnelInitialLoading].filter(Boolean).length;
-  const progress = Math.round((modulesLoaded / 4) * 100);
-  const allLoaded = modulesLoaded === 4;
+  const modulesLoaded = [!overviewLoading, !funnelLoading, !partnerMgmtLoading, !funnelInitialLoading, !performanceAnalyticsLoading, !tierAnalyticsLoading].filter(Boolean).length;
+  const progress = Math.round((modulesLoaded / 6) * 100);
+  const allLoaded = modulesLoaded === 6;
 
   // Show splash screen with progress bar until all loaded
   if (!allLoaded) {
@@ -493,6 +523,10 @@ function App() {
               availableRegions={availableRegions}
               activeTab={activeTab}
               setActiveTab={setActiveTab}
+              performanceAnalyticsLoading={performanceAnalyticsLoading}
+              tierAnalyticsLoading={tierAnalyticsLoading}
+              performanceAnalyticsData={performanceAnalyticsData}
+              tierAnalyticsData={tierAnalyticsData}
             />
           } />
           <Route path="/partner/:partnerId" element={

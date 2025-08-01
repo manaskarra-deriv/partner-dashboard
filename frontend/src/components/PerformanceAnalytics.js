@@ -206,7 +206,18 @@ const PerformanceAnalytics = ({ analytics, formatCurrency, formatNumber, formatV
   };
 
   // Don't render anything if main app is loading or no data
-  if (mainLoading || !analytics) {
+  if (mainLoading) {
+    return (
+      <div className="performance-analytics">
+        <div className="analytics-header">
+          <h2 className="heading-lg">Performance Analytics</h2>
+          <p className="text-secondary">Loading monthly performance trends...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!analytics) {
     return null;
   }
 
