@@ -32,6 +32,7 @@ const ApplicationFunnel = ({
   // Rankings toggle state
   const [showRankings, setShowRankings] = useState(false);
   const [rankingsLoading, setRankingsLoading] = useState(false);
+  const [rankingsDataLoaded, setRankingsDataLoaded] = useState(false);
   const monthlyLoading = countryAnalysisLoading.monthly;
   const [selectedTierFilter, setSelectedTierFilter] = useState('all'); // 'all', 'Platinum', 'Gold', 'Silver', 'Bronze', 'Inactive'
   const [selectedTier, setSelectedTier] = useState('');
@@ -445,6 +446,7 @@ const ApplicationFunnel = ({
       
       if (includeRankings) {
         setShowRankings(true);
+        setRankingsDataLoaded(true);
       }
 
     } catch (err) {
@@ -493,10 +495,14 @@ const ApplicationFunnel = ({
   const handleToggleRankings = async (e) => {
     const isChecked = e.target.checked;
     if (isChecked && (selectedCountry || selectedRegion)) {
-      // Show loading state while fetching rankings
-      setRankingsLoading(true);
-      // Fetch with rankings enabled
-      await fetchTierAnalytics(selectedCountry, selectedRegion, true);
+      if (rankingsDataLoaded) {
+        // Rankings data already exists, just show it
+        setShowRankings(true);
+      } else {
+        // Need to fetch rankings data first
+        setRankingsLoading(true);
+        await fetchTierAnalytics(selectedCountry, selectedRegion, true);
+      }
     } else {
       // Just toggle off rankings (keep existing data but hide rankings)
       setShowRankings(false);
@@ -537,6 +543,7 @@ const ApplicationFunnel = ({
     setTierAnalyticsData(null);
     setMonthlyCountryData(null);
     setShowRankings(false); // Reset rankings toggle
+    setRankingsDataLoaded(false); // Reset rankings data state
     
     if (country) {
       console.log('🔍 Calling fetchAllCountryData for country:', country);
@@ -554,6 +561,7 @@ const ApplicationFunnel = ({
     setTierAnalyticsData(null);
     setMonthlyCountryData(null);
     setShowRankings(false); // Reset rankings toggle
+    setRankingsDataLoaded(false); // Reset rankings data state
     
     if (region) {
       console.log('🔍 Calling fetchAllCountryData for region:', region);
