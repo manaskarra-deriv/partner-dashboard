@@ -1,15 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import PartnerEnablement from './PartnerEnablement';
 
-const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, funnelData, availableCountries, availableRegions }) => {
-  const [tierAnalyticsData, setTierAnalyticsData] = useState(null);
-  const [monthlyCountryData, setMonthlyCountryData] = useState(null);
-  const [tierLoading, setTierLoading] = useState(false);
-  const [monthlyLoading, setMonthlyLoading] = useState(false);
-  const [selectedCountry, setSelectedCountry] = useState('');
-  const [selectedRegion, setSelectedRegion] = useState('');
+const ApplicationFunnel = ({ 
+  formatNumber, 
+  getTierColor, 
+  mainLoading = false, 
+  funnelData, 
+  availableCountries, 
+  availableRegions, 
+  navigateToPartnerDetail,
+  // Persistent state from App.js
+  tierAnalyticsDataCountry: tierAnalyticsData,
+  setTierAnalyticsDataCountry: setTierAnalyticsData,
+  monthlyCountryData,
+  setMonthlyCountryData,
+  tierProgressionData,
+  setTierProgressionData,
+  selectedCountry,
+  setSelectedCountry,
+  selectedRegion,
+  setSelectedRegion,
+  countryAnalysisLoading,
+  setCountryAnalysisLoading
+}) => {
+  // Use persistent loading state instead of local state
+  const tierLoading = countryAnalysisLoading.tier;
+  
+  // Rankings toggle state
+  const [showRankings, setShowRankings] = useState(false);
+  const [rankingsLoading, setRankingsLoading] = useState(false);
+  const monthlyLoading = countryAnalysisLoading.monthly;
   const [selectedTierFilter, setSelectedTierFilter] = useState('all'); // 'all', 'Platinum', 'Gold', 'Silver', 'Bronze', 'Inactive'
   const [selectedTier, setSelectedTier] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
@@ -19,6 +42,7 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
   const [clickedTier, setClickedTier] = useState('');
   // State for monthly performance trends
   const [activePerformanceChart, setActivePerformanceChart] = useState('company_revenue');
+  const [showTrends, setShowTrends] = useState(false);
 
   // Helper functions for monthly performance trends
   const formatChartData = () => {
@@ -54,6 +78,8 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
           dataPoint[tierKey] = tierData.earnings || 0;
         } else if (activePerformanceChart === 'active_clients') {
           dataPoint[tierKey] = tierData.active_clients || 0;
+        } else if (activePerformanceChart === 'active_partners') {
+          dataPoint[tierKey] = tierData.count || 0;
         } else if (activePerformanceChart === 'new_clients') {
           dataPoint[tierKey] = tierData.new_clients || 0;
         } else if (activePerformanceChart === 'total_deposits') {
@@ -72,6 +98,7 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
       'company_revenue': 'Company Revenue by Tier',
       'total_earnings': 'Partner Earnings by Tier',
       'active_clients': 'Active Clients by Tier',
+      'active_partners': 'Active Partners by Tier',
       'new_clients': 'New Clients by Tier',
       'total_deposits': 'Total Deposits by Tier'
     };
@@ -88,7 +115,7 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
   };
 
   const formatYAxisTick = (value) => {
-    if (activePerformanceChart === 'active_clients' || activePerformanceChart === 'new_clients') {
+    if (activePerformanceChart === 'active_clients' || activePerformanceChart === 'new_clients' || activePerformanceChart === 'active_partners') {
       return value >= 1000 ? `${(value / 1000).toFixed(0)}K` : value;
     }
     return formatCurrency(value);
@@ -103,7 +130,7 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
 
       // Format total for display
       let formattedTotal;
-      if (activePerformanceChart === 'active_clients' || activePerformanceChart === 'new_clients') {
+      if (activePerformanceChart === 'active_clients' || activePerformanceChart === 'new_clients' || activePerformanceChart === 'active_partners') {
         formattedTotal = formatNumber(monthTotal, true);
       } else {
         formattedTotal = formatCurrency(monthTotal);
@@ -128,7 +155,7 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
             const tierName = entry.dataKey.charAt(0).toUpperCase() + entry.dataKey.slice(1);
             let formattedValue;
             
-            if (activePerformanceChart === 'active_clients' || activePerformanceChart === 'new_clients') {
+            if (activePerformanceChart === 'active_clients' || activePerformanceChart === 'new_clients' || activePerformanceChart === 'active_partners') {
               formattedValue = formatNumber(entry.value, true);
             } else {
               formattedValue = formatCurrency(entry.value);
@@ -398,25 +425,43 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
 
   // Data fetching functions
   // Fetch tier analytics only
-  const fetchTierAnalytics = async (country, region) => {
-    setTierLoading(true);
+  const fetchTierAnalytics = async (country, region, includeRankings = false) => {
+    const loadingKey = includeRankings ? 'rankings' : 'tier';
+    if (includeRankings) {
+      setRankingsLoading(true);
+    } else {
+      setCountryAnalysisLoading(prev => ({ ...prev, tier: true }));
+    }
+    
     try {
       const params = new URLSearchParams();
       if (country) params.append('country', country);
       if (region) params.append('region', region);
+      params.append('include_rankings', includeRankings.toString());
+      
+      console.log(`🔍 Fetching tier analytics with rankings: ${includeRankings}`);
       const response = await axios.get(`${API_BASE_URL}/api/country-tier-analytics?${params}`);
       setTierAnalyticsData(response.data.data);
+      
+      if (includeRankings) {
+        setShowRankings(true);
+      }
+
     } catch (err) {
       console.error('Error fetching tier analytics:', err);
     } finally {
-      setTierLoading(false);
+      if (includeRankings) {
+        setRankingsLoading(false);
+      } else {
+        setCountryAnalysisLoading(prev => ({ ...prev, tier: false }));
+      }
     }
   };
 
   // Fetch monthly trends only
   const fetchMonthlyCountryData = async (country, region) => {
     console.log('🔍 fetchMonthlyCountryData called:', { country, region });
-    setMonthlyLoading(true);
+    setCountryAnalysisLoading(prev => ({ ...prev, monthly: true }));
     try {
       const params = new URLSearchParams();
       if (country) params.append('country', country);
@@ -431,7 +476,7 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
       console.error('❌ Error fetching monthly country data:', err);
       setMonthlyCountryData(null);
     } finally {
-      setMonthlyLoading(false);
+      setCountryAnalysisLoading(prev => ({ ...prev, monthly: false }));
       console.log('🔍 monthlyLoading set to false');
     }
   };
@@ -439,8 +484,23 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
   // Fetch both, but independently
   const fetchAllCountryData = async (country, region) => {
     if (!country && !region) return;
-    fetchTierAnalytics(country, region);
+    // Initial load without rankings for fast performance
+    fetchTierAnalytics(country, region, false);
     fetchMonthlyCountryData(country, region);
+  };
+
+  // Toggle rankings function
+  const handleToggleRankings = async (e) => {
+    const isChecked = e.target.checked;
+    if (isChecked && (selectedCountry || selectedRegion)) {
+      // Show loading state while fetching rankings
+      setRankingsLoading(true);
+      // Fetch with rankings enabled
+      await fetchTierAnalytics(selectedCountry, selectedRegion, true);
+    } else {
+      // Just toggle off rankings (keep existing data but hide rankings)
+      setShowRankings(false);
+    }
   };
 
   const fetchTierDetail = async (tier, month = null) => {
@@ -476,6 +536,7 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
     // Clear previous data when switching
     setTierAnalyticsData(null);
     setMonthlyCountryData(null);
+    setShowRankings(false); // Reset rankings toggle
     
     if (country) {
       console.log('🔍 Calling fetchAllCountryData for country:', country);
@@ -492,6 +553,7 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
     // Clear previous data when switching
     setTierAnalyticsData(null);
     setMonthlyCountryData(null);
+    setShowRankings(false); // Reset rankings toggle
     
     if (region) {
       console.log('🔍 Calling fetchAllCountryData for region:', region);
@@ -748,7 +810,7 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
   return (
     <div className="application-funnel-section">
       <div className="analytics-header">
-        <h2 className="heading-lg">Partner Application Funnel - Country/Region Analysis</h2>
+        <h2 className="heading-lg">Country/Region Analysis</h2>
         <p className="text-secondary">Country and GP region focused partner application analysis with tier breakdown and rankings</p>
       </div>
       
@@ -799,87 +861,160 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
 
         {(selectedCountry || selectedRegion) && (
           <>
-                         {/* Monthly Performance Trends Section */}
-             <div className="section-divider">
-               <h3 className="section-title">Monthly Performance Trends - {selectedCountry || selectedRegion}</h3>
-               <p className="section-subtitle">Monthly performance trends per tier with commission, revenue and active clients distribution</p>
-             </div>
+                                     {tierLoading ? (
+              <div className="loading-state">Loading monthly performance trends...</div>
+            ) : tierAnalyticsData?.monthly_tier_data ? (
+              <div className="performance-trends-section">
+                <div className="performance-header">
+                  <h3 className="performance-title">Monthly Performance Trends - {selectedCountry || selectedRegion}</h3>
+                </div>
 
-             {tierLoading ? (
-               <div className="loading-state">Loading monthly performance trends...</div>
-             ) : tierAnalyticsData?.monthly_tier_data ? (
-               <div className="performance-trends-section">
-                 {/* Chart Controls */}
-                 <div className="performance-chart-controls">
-                   <div className="chart-tabs compact">
-                     <button 
-                       className={`chart-tab ${activePerformanceChart === 'company_revenue' ? 'active' : ''}`}
-                       onClick={() => setActivePerformanceChart('company_revenue')}
-                     >
-                       Company Revenue
-                     </button>
-                     <button 
-                       className={`chart-tab ${activePerformanceChart === 'total_earnings' ? 'active' : ''}`}
-                       onClick={() => setActivePerformanceChart('total_earnings')}
-                     >
-                       Partner Earnings
-                     </button>
-                     <button 
-                       className={`chart-tab ${activePerformanceChart === 'active_clients' ? 'active' : ''}`}
-                       onClick={() => setActivePerformanceChart('active_clients')}
-                     >
-                       Active Clients
-                     </button>
-                     <button 
-                       className={`chart-tab ${activePerformanceChart === 'new_clients' ? 'active' : ''}`}
-                       onClick={() => setActivePerformanceChart('new_clients')}
-                     >
-                       New Clients
-                     </button>
-                     <button 
-                       className={`chart-tab ${activePerformanceChart === 'total_deposits' ? 'active' : ''}`}
-                       onClick={() => setActivePerformanceChart('total_deposits')}
-                     >
-                       Total Deposits
-                     </button>
-                   </div>
-                 </div>
+                <div className="performance-content">
+                  {/* Chart Section */}
+                  <div className="chart-section">
+                    <div className="chart-controls-inline">
+                      <div className="chart-tabs-group">
+                        <button 
+                          className={`chart-tab-mini ${activePerformanceChart === 'company_revenue' ? 'active' : ''}`}
+                          onClick={() => setActivePerformanceChart('company_revenue')}
+                        >
+                          Revenue
+                        </button>
+                        <button 
+                          className={`chart-tab-mini ${activePerformanceChart === 'total_earnings' ? 'active' : ''}`}
+                          onClick={() => setActivePerformanceChart('total_earnings')}
+                        >
+                          Earnings
+                        </button>
+                        <button 
+                          className={`chart-tab-mini ${activePerformanceChart === 'active_clients' ? 'active' : ''}`}
+                          onClick={() => setActivePerformanceChart('active_clients')}
+                        >
+                          Active Clients
+                        </button>
+                        <button 
+                          className={`chart-tab-mini ${activePerformanceChart === 'active_partners' ? 'active' : ''}`}
+                          onClick={() => setActivePerformanceChart('active_partners')}
+                        >
+                          Active Partners
+                        </button>
+                        <button 
+                          className={`chart-tab-mini ${activePerformanceChart === 'new_clients' ? 'active' : ''}`}
+                          onClick={() => setActivePerformanceChart('new_clients')}
+                        >
+                          New Clients
+                        </button>
+                        <button 
+                          className={`chart-tab-mini ${activePerformanceChart === 'total_deposits' ? 'active' : ''}`}
+                          onClick={() => setActivePerformanceChart('total_deposits')}
+                        >
+                          Deposits
+                        </button>
+                      </div>
+                      <div className="view-toggle">
+                        <label className="toggle-switch">
+                          <span className="toggle-label">Toggle Trends</span>
+                          <input
+                            type="checkbox"
+                            checked={showTrends}
+                            onChange={(e) => setShowTrends(e.target.checked)}
+                          />
+                          <span className="toggle-slider"></span>
+                        </label>
+                      </div>
+                    </div>
 
-                 {/* Chart Display */}
-                 <div className="performance-chart-container compact">
-                   <div className="chart-header">
-                     <h4 className="chart-title">{getPerformanceChartTitle()}</h4>
-                   </div>
-                   <div className="chart-content">
-                     <ResponsiveContainer width="100%" height={250}>
-                       <BarChart 
-                         data={formatChartData()} 
-                         margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-                         barCategoryGap="20%"
-                       >
-                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                         <XAxis 
-                           dataKey="month" 
-                           tick={{ fontSize: 11, fill: '#6b7280' }}
-                           tickLine={{ stroke: '#d1d5db' }}
-                         />
-                         <YAxis 
-                           tick={{ fontSize: 11, fill: '#6b7280' }}
-                           tickLine={{ stroke: '#d1d5db' }}
-                           tickFormatter={formatYAxisTick}
-                         />
-                         <Tooltip content={<CustomPerformanceTooltip />} />
-                         <Bar dataKey="bronze" stackId="a" fill="#F97316" name="Bronze" />
-                         <Bar dataKey="silver" stackId="a" fill="#9CA3AF" name="Silver" />
-                         <Bar dataKey="gold" stackId="a" fill="#FCD34D" name="Gold" />
-                         <Bar dataKey="platinum" stackId="a" fill="#E5E7EB" name="Platinum" />
-                       </BarChart>
-                     </ResponsiveContainer>
-                   </div>
-                 </div>
+                    <ResponsiveContainer width="100%" height={180}>
+                      {showTrends ? (
+                        <LineChart 
+                          data={formatChartData()} 
+                          margin={{ top: 10, right: 15, left: 15, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="2 2" stroke="#e5e7eb" opacity={0.4} />
+                          <XAxis 
+                            dataKey="month" 
+                            tick={{ fontSize: 10, fill: '#6b7280' }}
+                            tickLine={false}
+                            axisLine={false}
+                          />
+                          <YAxis 
+                            tick={{ fontSize: 10, fill: '#6b7280' }}
+                            tickLine={false}
+                            axisLine={false}
+                            tickFormatter={formatYAxisTick}
+                          />
+                          <Tooltip 
+                            content={<CustomPerformanceTooltip />}
+                            cursor={{ stroke: 'rgba(0, 0, 0, 0.1)' }}
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="platinum" 
+                            stroke="#6B7280" 
+                            strokeWidth={2.5}
+                            dot={{ fill: '#6B7280', strokeWidth: 2, r: 3 }}
+                            name="Platinum" 
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="gold" 
+                            stroke="#F59E0B" 
+                            strokeWidth={2.5}
+                            dot={{ fill: '#F59E0B', strokeWidth: 2, r: 3 }}
+                            name="Gold" 
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="silver" 
+                            stroke="#9CA3AF" 
+                            strokeWidth={2.5}
+                            dot={{ fill: '#9CA3AF', strokeWidth: 2, r: 3 }}
+                            name="Silver" 
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="bronze" 
+                            stroke="#F97316" 
+                            strokeWidth={2.5}
+                            dot={{ fill: '#F97316', strokeWidth: 2, r: 3 }}
+                            name="Bronze" 
+                          />
+                        </LineChart>
+                      ) : (
+                        <BarChart 
+                          data={formatChartData()} 
+                          margin={{ top: 10, right: 15, left: 15, bottom: 5 }}
+                          barCategoryGap="15%"
+                          maxBarSize={50}
+                        >
+                          <CartesianGrid strokeDasharray="2 2" stroke="#e5e7eb" opacity={0.4} />
+                          <XAxis 
+                            dataKey="month" 
+                            tick={{ fontSize: 10, fill: '#6b7280' }}
+                            tickLine={false}
+                            axisLine={false}
+                          />
+                          <YAxis 
+                            tick={{ fontSize: 10, fill: '#6b7280' }}
+                            tickLine={false}
+                            axisLine={false}
+                            tickFormatter={formatYAxisTick}
+                          />
+                          <Tooltip 
+                            content={<CustomPerformanceTooltip />}
+                            cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
+                          />
+                          <Bar dataKey="bronze" stackId="a" fill="#F97316" name="Bronze" />
+                          <Bar dataKey="silver" stackId="a" fill="#9CA3AF" name="Silver" />
+                          <Bar dataKey="gold" stackId="a" fill="#FCD34D" name="Gold" />
+                          <Bar dataKey="platinum" stackId="a" fill="#E5E7EB" name="Platinum" />
+                        </BarChart>
+                      )}
+                    </ResponsiveContainer>
+                  </div>
 
-                                   {/* Commission, Revenue and Active Clients Distribution Bars */}
-                  <div className="performance-distribution-section">
+                                    {/* Distribution Section */}
+                  <div className="distributions-section">
                     <div className="stacked-charts compact">
                       {(() => {
                         if (!tierAnalyticsData?.monthly_tier_data || !tierAnalyticsData?.available_months) {
@@ -991,7 +1126,8 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
                       })()}
                     </div>
                   </div>
-               </div>
+                </div>
+              </div>
              ) : (
                <div className="empty-state">
                  <p>No performance data available for the selected country/region.</p>
@@ -1000,8 +1136,26 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
 
             {/* Tier Analytics Section */}
             <div className="section-divider">
-              <h3 className="section-title">Tier Analytics - {selectedCountry || selectedRegion}</h3>
-              <p className="section-subtitle">Comprehensive tier breakdown with rankings and performance metrics</p>
+              <div className="section-header-with-toggle">
+                <div className="section-header-content">
+                  <h3 className="section-title">Tier Analytics - {selectedCountry || selectedRegion}</h3>
+                  <p className="section-subtitle">Comprehensive tier breakdown with rankings and performance metrics</p>
+                </div>
+                <div className="view-toggle">
+                  <label className="toggle-switch">
+                    <span className="toggle-label">
+                      {rankingsLoading ? 'Loading Rankings...' : 'Toggle Rankings'}
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={showRankings}
+                      onChange={handleToggleRankings}
+                      disabled={tierLoading || rankingsLoading}
+                    />
+                    <span className="toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
             </div>
 
             {/* Summary Cards with Rankings */}
@@ -1022,8 +1176,8 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
                              index === 4 ? 'Total Deposits' :
                              index === 5 ? 'ETD Ratio' : 'New Clients'}
                           </div>
-                          <div className="summary-rank loading-placeholder">Loading...</div>
-                          <div className="summary-percentage loading-placeholder">Loading...</div>
+                          {showRankings && <div className="summary-rank loading-placeholder">Loading...</div>}
+                          {showRankings && <div className="summary-percentage loading-placeholder">Loading...</div>}
                         </div>
                       ))}
                     </>
@@ -1038,26 +1192,26 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
                           <div className="summary-label">
                             {selectedTierFilter === 'all' ? 'Active Partners' : `${selectedTierFilter} Partners`}
                           </div>
-                          {summaryData.active_partners_rank && (
+                          {showRankings && summaryData.active_partners_rank && (
                             <div className="summary-rank">#{summaryData.active_partners_rank}</div>
                           )}
-                          <div className="summary-percentage">{summaryData.partners_percentage || '0.0'}% of global</div>
+                          {showRankings && <div className="summary-percentage">{summaryData.partners_percentage || '0.0'}% of global</div>}
                         </div>
                         <div className="summary-card">
                           <div className="summary-value">${formatNumber(summaryData.total_partner_earnings || 0)}</div>
                           <div className="summary-label">Partner Earnings</div>
-                          {summaryData.earnings_rank && (
+                          {showRankings && summaryData.earnings_rank && (
                             <div className="summary-rank">#{summaryData.earnings_rank}</div>
                           )}
-                          <div className="summary-percentage">{summaryData.earnings_percentage || '0.0'}% of global</div>
+                          {showRankings && <div className="summary-percentage">{summaryData.earnings_percentage || '0.0'}% of global</div>}
                         </div>
                         <div className="summary-card">
                           <div className="summary-value">${formatNumber(summaryData.total_company_revenue || 0)}</div>
                           <div className="summary-label">Deriv Revenue</div>
-                          {summaryData.revenue_rank && (
+                          {showRankings && summaryData.revenue_rank && (
                             <div className="summary-rank">#{summaryData.revenue_rank}</div>
                           )}
-                          <div className="summary-percentage">{summaryData.revenue_percentage || '0.0'}% of global</div>
+                          {showRankings && <div className="summary-percentage">{summaryData.revenue_percentage || '0.0'}% of global</div>}
                         </div>
                         <div className="summary-card">
                           <div className={`summary-value ${getEtrClass(summaryData.etr_ratio || 0)}`}>
@@ -1068,10 +1222,10 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
                         <div className="summary-card">
                           <div className="summary-value">${formatNumber(summaryData.total_deposits || 0)}</div>
                           <div className="summary-label">Total Deposits</div>
-                          {summaryData.deposits_rank && (
+                          {showRankings && summaryData.deposits_rank && (
                             <div className="summary-rank">#{summaryData.deposits_rank}</div>
                           )}
-                          <div className="summary-percentage">{summaryData.deposits_percentage || '0.0'}% of global</div>
+                          {showRankings && <div className="summary-percentage">{summaryData.deposits_percentage || '0.0'}% of global</div>}
                         </div>
                         <div className="summary-card">
                           <div className="summary-value etd-red">
@@ -1082,10 +1236,10 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
                         <div className="summary-card">
                           <div className="summary-value">{formatNumber(summaryData.total_new_clients || 0)}</div>
                           <div className="summary-label">New Clients</div>
-                          {summaryData.clients_rank && (
+                          {showRankings && summaryData.clients_rank && (
                             <div className="summary-rank">#{summaryData.clients_rank}</div>
                           )}
-                          <div className="summary-percentage">{summaryData.clients_percentage || '0.0'}% of global</div>
+                          {showRankings && <div className="summary-percentage">{summaryData.clients_percentage || '0.0'}% of global</div>}
                         </div>
                       </>
                     );
@@ -1120,28 +1274,28 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
                         <div className="summary-card">
                           <div className="summary-value">${formatNumber(summaryData.avg_monthly_earnings || 0)}</div>
                           <div className="summary-label">Avg Partner Earnings/Month</div>
-                          {summaryData.avg_monthly_earnings_rank && (
+                          {showRankings && summaryData.avg_monthly_earnings_rank && (
                             <div className="summary-rank">#{summaryData.avg_monthly_earnings_rank}</div>
                           )}
                         </div>
                         <div className="summary-card">
                           <div className="summary-value">${formatNumber(summaryData.avg_monthly_revenue || 0)}</div>
                           <div className="summary-label">Avg Deriv Revenue/Month</div>
-                          {summaryData.avg_monthly_revenue_rank && (
+                          {showRankings && summaryData.avg_monthly_revenue_rank && (
                             <div className="summary-rank">#{summaryData.avg_monthly_revenue_rank}</div>
                           )}
                         </div>
                         <div className="summary-card">
                           <div className="summary-value">${formatNumber(summaryData.avg_monthly_deposits || 0)}</div>
                           <div className="summary-label">Avg Deposits/Month</div>
-                          {summaryData.avg_monthly_deposits_rank && (
+                          {showRankings && summaryData.avg_monthly_deposits_rank && (
                             <div className="summary-rank">#{summaryData.avg_monthly_deposits_rank}</div>
                           )}
                         </div>
                         <div className="summary-card">
                           <div className="summary-value">{formatNumber(summaryData.avg_monthly_new_clients || 0)}</div>
                           <div className="summary-label">Avg New Clients/Month</div>
-                          {summaryData.avg_monthly_new_clients_rank && (
+                          {showRankings && summaryData.avg_monthly_new_clients_rank && (
                             <div className="summary-rank">#{summaryData.avg_monthly_new_clients_rank}</div>
                           )}
                         </div>
@@ -1213,9 +1367,27 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
               renderTierTable(selectedTierFilter)
             )}
 
+            {/* Partner Enablement Section */}
+            <div className="section-divider">
+              <h3 className="section-title">Partner Enablement - {selectedCountry || selectedRegion}</h3>
+              <p className="section-subtitle">Tier progression tracking with weighted net movement across all tiers on a monthly basis</p>
+            </div>
+
+            {/* Partner Enablement Content */}
+            <PartnerEnablement 
+              selectedCountry={selectedCountry}
+              selectedRegion={selectedRegion}
+              formatNumber={formatNumber}
+              navigateToPartnerDetail={navigateToPartnerDetail}
+              tierProgressionData={tierProgressionData}
+              setTierProgressionData={setTierProgressionData}
+              countryAnalysisLoading={countryAnalysisLoading}
+              setCountryAnalysisLoading={setCountryAnalysisLoading}
+            />
+
             {/* Monthly Trends Table */}
             <div className="section-divider">
-              <h3 className="section-title">Monthly Trends - {selectedCountry || selectedRegion}</h3>
+              <h3 className="section-title">Application Funnel - {selectedCountry || selectedRegion}</h3>
               <p className="section-subtitle">All months showing progression from application to client acquisition and earning generation</p>
             </div>
 
@@ -1276,7 +1448,9 @@ const ApplicationFunnel = ({ formatNumber, getTierColor, mainLoading = false, fu
                         </td>
                         <td className="funnel-cell">
                           <div className="funnel-value">{formatNumber(month.applications)}</div>
-                          <div className="funnel-rank">#{month.country_rank || 'N/A'}</div>
+                          {showRankings && (
+                            <div className="funnel-rank">#{month.country_rank || 'N/A'}</div>
+                          )}
                         </td>
                         <td className="funnel-cell">
                           <div className="funnel-value">{formatNumber(month.sub_partners)}</div>

@@ -41,6 +41,28 @@ function App() {
   // Check if we're on a partner detail page
   const isPartnerDetailPage = location.pathname.startsWith('/partner/');
 
+  // Handle partner navigation from tier progression modal
+  useEffect(() => {
+    const handleSwitchToPartnerManagement = (event) => {
+      const { partnerId } = event.detail;
+      
+      // Navigate to the partner detail page using React Router
+      navigate(`/partner/${partnerId}`);
+    };
+
+    window.addEventListener('switchToPartnerManagement', handleSwitchToPartnerManagement);
+
+    return () => {
+      window.removeEventListener('switchToPartnerManagement', handleSwitchToPartnerManagement);
+    };
+  }, [navigate]);
+
+  // Helper function to navigate to partner detail
+  const navigateToPartnerDetail = (partnerId) => {
+    // Navigate to the partner detail page using React Router
+    navigate(`/partner/${partnerId}`);
+  };
+
   // Loading states for different modules
   const [overviewLoading, setOverviewLoading] = useState(true);
   const [funnelLoading, setFunnelLoading] = useState(true);
@@ -48,6 +70,18 @@ function App() {
   const [funnelData, setFunnelData] = useState(null);
   const [availableCountries, setAvailableCountries] = useState([]);
   const [availableRegions, setAvailableRegions] = useState([]);
+  
+  // Country Analysis persistent state
+  const [tierAnalyticsDataCountry, setTierAnalyticsDataCountry] = useState(null);
+  const [monthlyCountryData, setMonthlyCountryData] = useState(null);
+  const [tierProgressionData, setTierProgressionData] = useState(null);
+  const [selectedCountry, setSelectedCountry] = useState('');
+  const [selectedRegion, setSelectedRegion] = useState('');
+  const [countryAnalysisLoading, setCountryAnalysisLoading] = useState({
+    tier: false,
+    monthly: false,
+    progression: false
+  });
   const [funnelInitialLoading, setFunnelInitialLoading] = useState(true);
 
   // Separate loading states for performance analytics and tier analytics
@@ -540,6 +574,20 @@ function App() {
               performanceAnalyticsData={performanceAnalyticsData}
               tierAnalyticsData={tierAnalyticsData}
               onRequestPIIAccess={handleRequestPIIAccess}
+              navigateToPartnerDetail={navigateToPartnerDetail}
+              // Persistent country analysis state
+              tierAnalyticsDataCountry={tierAnalyticsDataCountry}
+              setTierAnalyticsDataCountry={setTierAnalyticsDataCountry}
+              monthlyCountryData={monthlyCountryData}
+              setMonthlyCountryData={setMonthlyCountryData}
+              tierProgressionData={tierProgressionData}
+              setTierProgressionData={setTierProgressionData}
+              selectedCountry={selectedCountry}
+              setSelectedCountry={setSelectedCountry}
+              selectedRegion={selectedRegion}
+              setSelectedRegion={setSelectedRegion}
+              countryAnalysisLoading={countryAnalysisLoading}
+              setCountryAnalysisLoading={setCountryAnalysisLoading}
             />
           } />
           <Route path="/partner/:partnerId" element={

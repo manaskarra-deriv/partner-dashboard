@@ -1490,6 +1490,9 @@ def get_country_tier_analytics():
         
         country = request.args.get('country')
         region = request.args.get('region')
+        include_rankings = request.args.get('include_rankings', 'false').lower() == 'true'
+        
+        print(f"🔍 Country tier analytics request: country={country}, region={region}, include_rankings={include_rankings}")
         
         # Handle URL encoding where + should become spaces
         if region:
@@ -1618,6 +1621,52 @@ def get_country_tier_analytics():
                 'new_clients': int(row['new_active_clients']),
                 'volume': float(row['volume_usd'])
             }
+        
+        # Fast mode: return basic data without expensive ranking calculations
+        if not include_rankings:
+            print("🚀 Fast mode: Returning basic data without rankings")
+            
+            # Create summary without rankings (all ranks default to 1)
+            summary = {
+                'partner_country': country if country else None,
+                'partner_region': region if region else None,
+                'total_partners': int(total_partners),
+                'total_active_partners': int(total_active_partners),
+                'total_company_revenue': float(total_company_revenue),
+                'total_partner_earnings': float(total_earnings),
+                'total_deposits': float(total_deposits),
+                'total_new_clients': int(total_clients),
+                'partners_rank': 1,
+                'active_partners_rank': 1,
+                'revenue_rank': 1,
+                'earnings_rank': 1,
+                'deposits_rank': 1,
+                'clients_rank': 1,
+                'etr_rank': 1,
+                'etd_rank': 1,
+                'avg_monthly_revenue_rank': 1,
+                'avg_monthly_earnings_rank': 1,
+                'avg_monthly_deposits_rank': 1,
+                'avg_monthly_new_clients_rank': 1
+            }
+            
+            analytics_data = {
+                'summary': summary,
+                'monthly_tier_data': monthly_data,
+                'tier_country_rankings': {},
+                'monthly_rankings': {},
+                'tier_monthly_rankings': {},
+                'country_rankings': {},
+                'available_months': list(monthly_data.keys()) if monthly_data else [],
+                'global_totals': {}
+            }
+            
+            return jsonify({
+                'success': True,
+                'data': analytics_data,
+                'country': country,
+                'region': region
+            })
         
         # Calculate real rankings by comparing against all countries OR all regions
         if region:
@@ -2732,6 +2781,589 @@ def get_tier_performance():
         
     except Exception as e:
         logger.error(f"Error getting tier performance data: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/partner-tier-progression', methods=['GET'])
+def get_partner_tier_progression():
+    """
+    Get partner tier progression data with movement tracking.
+    Supports filtering by country, region, and tier transitions.
+    """
+    try:
+        global partner_data
+        if partner_data is None:
+            return jsonify({'error': 'No data available'}), 400
+        
+        country = request.args.get('country')
+        region = request.args.get('region')
+        from_tier = request.args.get('from_tier')
+        to_tier = request.args.get('to_tier')
+        is_global = request.args.get('is_global', 'false').lower() == 'true'
+        
+        # Handle URL encoding where + should become spaces
+        if region:
+            region = region.replace('+', ' ')
+        if country:
+            country = country.replace('+', ' ')
+        
+        # For global requests, don't filter by country/region
+        if not is_global and not country and not region:
+            return jsonify({'error': 'Either country, region parameter, or is_global=true is required'}), 400
+        
+        # Filter data by country, region, or use all data for global
+        if is_global:
+            filtered_data = partner_data.copy()
+        elif region:
+            # Get countries that belong to this region from hardcoded mapping
+            from region_mapping import get_countries_for_region
+            region_countries = get_countries_for_region(region)
+            
+            if not region_countries:
+                return jsonify({
+                    'success': True,
+                    'data': {
+                        'monthly_progression': [],
+                        'summary': {'total_positive_score': 0, 'total_negative_score': 0, 'weighted_net_movement': 0, 'total_months': 0, 'avg_monthly_net_movement': 0}
+                    },
+                    'country': country,
+                    'region': region
+                })
+            
+            # Filter CSV data by countries in this region
+            filtered_data = partner_data[partner_data['country'].isin(region_countries)].copy()
+        else:
+            # Filter CSV data by country
+            filtered_data = partner_data[partner_data['country'] == country].copy()
+        
+        if filtered_data.empty:
+            return jsonify({
+                'success': True,
+                'data': {
+                    'monthly_progression': [],
+                    'summary': {'total_positive_score': 0, 'total_negative_score': 0, 'weighted_net_movement': 0, 'total_months': 0, 'avg_monthly_net_movement': 0}
+                },
+                'country': country,
+                'region': region
+            })
+        
+        # Define tier movement scores based on specific transitions
+        tier_movement_scores = {
+            ('Bronze', 'Silver'): 1,
+            ('Silver', 'Gold'): 2,
+            ('Gold', 'Platinum'): 5,
+            ('Platinum', 'Gold'): -5,
+            ('Gold', 'Silver'): -2,
+            ('Silver', 'Bronze'): -1,
+            # Additional movements for completeness
+            ('Bronze', 'Gold'): 3,  # Bronze to Gold (Bronze->Silver + Silver->Gold = 1+2)
+            ('Silver', 'Platinum'): 7,  # Silver to Platinum (Silver->Gold + Gold->Platinum = 2+5)
+            ('Bronze', 'Platinum'): 8,  # Bronze to Platinum (Bronze->Silver + Silver->Gold + Gold->Platinum = 1+2+5)
+            ('Platinum', 'Silver'): -7,  # Platinum to Silver (Platinum->Gold + Gold->Silver = -5-2)
+            ('Gold', 'Bronze'): -3,  # Gold to Bronze (Gold->Silver + Silver->Bronze = -2-1)
+            ('Platinum', 'Bronze'): -8,  # Platinum to Bronze (Platinum->Gold + Gold->Silver + Silver->Bronze = -5-2-1)
+            # Movements to/from Inactive tier
+            ('Inactive', 'Bronze'): 1,
+            ('Inactive', 'Silver'): 3,
+            ('Inactive', 'Gold'): 6,
+            ('Inactive', 'Platinum'): 11,
+            ('Bronze', 'Inactive'): -1,
+            ('Silver', 'Inactive'): -3,
+            ('Gold', 'Inactive'): -6,
+            ('Platinum', 'Inactive'): -11
+        }
+        
+        # Sort data by partner and month to track progression
+        filtered_data = filtered_data.sort_values(['partner_id', 'month'])
+        
+        # Track monthly progression
+        monthly_progression = {}
+        
+        # Group by partner to track their tier changes over time
+        for partner_id, partner_data_group in filtered_data.groupby('partner_id'):
+            partner_months = partner_data_group.sort_values('month')
+            
+            # Track tier changes month over month
+            for i in range(1, len(partner_months)):
+                current_month = partner_months.iloc[i]
+                previous_month = partner_months.iloc[i-1]
+                
+                current_tier = current_month['partner_tier']
+                previous_tier = previous_month['partner_tier']
+                month_str = current_month['month'].strftime('%b %Y')
+                
+                # Apply tier filters if specified
+                tier_filter_match = True
+                if from_tier and from_tier != 'All Tiers' and previous_tier != from_tier:
+                    tier_filter_match = False
+                if to_tier and to_tier != 'All Tiers' and current_tier != to_tier:
+                    tier_filter_match = False
+                
+                if not tier_filter_match:
+                    continue
+                
+                # Calculate tier movement score using specific transition values
+                movement_key = (previous_tier, current_tier)
+                movement_score = tier_movement_scores.get(movement_key, 0)
+                
+                # Initialize month data if not exists
+                if month_str not in monthly_progression:
+                    monthly_progression[month_str] = {
+                        'positive_movements': 0,
+                        'negative_movements': 0,
+                        'positive_score': 0,
+                        'negative_score': 0,
+                        'total_partners_with_movement': 0,
+                        'partner_movements': []
+                    }
+                
+                # Track individual partner movements for detailed analysis
+                if movement_score != 0:
+                    monthly_progression[month_str]['total_partners_with_movement'] += 1
+                    monthly_progression[month_str]['partner_movements'].append({
+                        'partner_id': partner_id,
+                        'from_tier': previous_tier,
+                        'to_tier': current_tier,
+                        'movement_score': movement_score
+                    })
+                    
+                    if movement_score > 0:
+                        monthly_progression[month_str]['positive_movements'] += 1
+                        monthly_progression[month_str]['positive_score'] += movement_score
+                    else:
+                        monthly_progression[month_str]['negative_movements'] += 1
+                        monthly_progression[month_str]['negative_score'] += movement_score
+        
+        # Calculate weighted net movement for each month
+        formatted_monthly_data = []
+        total_positive_score = 0
+        total_negative_score = 0
+        
+        # Sort months chronologically (latest first to match other endpoints)
+        sorted_months = sorted(monthly_progression.keys(), 
+                              key=lambda x: pd.to_datetime(x, format='%b %Y'), 
+                              reverse=True)
+        
+        for month_str in sorted_months:
+            month_data = monthly_progression[month_str]
+            weighted_net_movement = month_data['positive_score'] + month_data['negative_score']
+            
+            # Remove detailed partner movements from the response (too much data)
+            monthly_summary = {
+                'month': month_str,
+                'positive_movements': month_data['positive_movements'],
+                'negative_movements': month_data['negative_movements'],
+                'positive_score': month_data['positive_score'],
+                'negative_score': month_data['negative_score'],
+                'weighted_net_movement': weighted_net_movement,
+                'total_partners_with_movement': month_data['total_partners_with_movement']
+            }
+            
+            formatted_monthly_data.append(monthly_summary)
+            total_positive_score += month_data['positive_score']
+            total_negative_score += month_data['negative_score']
+        
+        # Calculate overall summary
+        total_weighted_net_movement = total_positive_score + total_negative_score
+        
+        summary = {
+            'total_positive_score': total_positive_score,
+            'total_negative_score': total_negative_score,
+            'weighted_net_movement': total_weighted_net_movement,
+            'total_months': len(formatted_monthly_data),
+            'avg_monthly_net_movement': total_weighted_net_movement / len(formatted_monthly_data) if formatted_monthly_data else 0
+        }
+        
+        tier_progression_analytics = {
+            'monthly_progression': formatted_monthly_data,
+            'summary': summary
+        }
+        
+        return jsonify({
+            'success': True,
+            'data': tier_progression_analytics,
+            'country': country,
+            'region': region
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting partner tier progression: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/partner-tier-movement-details', methods=['GET'])
+def get_partner_tier_movement_details():
+    """Get detailed partner movement data for a specific month and movement type"""
+    try:
+        global partner_data
+        if partner_data is None:
+            return jsonify({'error': 'No data available'}), 400
+        
+        country = request.args.get('country')
+        region = request.args.get('region')
+        month = request.args.get('month')
+        movement_type = request.args.get('movement_type')  # 'positive' or 'negative'
+        from_tier = request.args.get('from_tier')
+        to_tier = request.args.get('to_tier')
+        
+        # Handle URL encoding where + should become spaces
+        if region:
+            region = region.replace('+', ' ')
+        if country:
+            country = country.replace('+', ' ')
+        
+        if not country and not region:
+            return jsonify({'error': 'Either country or region parameter is required'}), 400
+        
+        if not month:
+            return jsonify({'error': 'Month parameter is required'}), 400
+        
+        if not movement_type or movement_type not in ['positive', 'negative']:
+            return jsonify({'error': 'Valid movement_type parameter is required (positive or negative)'}), 400
+        
+        # Filter data by country or region
+        if region:
+            # Get countries that belong to this region from hardcoded mapping
+            from region_mapping import get_countries_for_region
+            region_countries = get_countries_for_region(region)
+            
+            if not region_countries:
+                return jsonify({
+                    'success': True,
+                    'data': {
+                        'movements': [],
+                        'summary': {'total_movements': 0, 'total_score': 0}
+                    },
+                    'country': country,
+                    'region': region,
+                    'month': month,
+                    'movement_type': movement_type
+                })
+            
+            # Filter CSV data by countries in this region
+            filtered_data = partner_data[partner_data['country'].isin(region_countries)].copy()
+        else:
+            # Filter CSV data by country
+            filtered_data = partner_data[partner_data['country'] == country].copy()
+        
+        if filtered_data.empty:
+            return jsonify({
+                'success': True,
+                'data': {
+                    'movements': [],
+                    'summary': {'total_movements': 0, 'total_score': 0}
+                },
+                'country': country,
+                'region': region,
+                'month': month,
+                'movement_type': movement_type
+            })
+        
+        # Define tier movement scores based on specific transitions
+        tier_movement_scores = {
+            ('Bronze', 'Silver'): 1,
+            ('Silver', 'Gold'): 2,
+            ('Gold', 'Platinum'): 5,
+            ('Platinum', 'Gold'): -5,
+            ('Gold', 'Silver'): -2,
+            ('Silver', 'Bronze'): -1,
+            # Additional movements for completeness
+            ('Bronze', 'Gold'): 3,  # Bronze to Gold (Bronze->Silver + Silver->Gold = 1+2)
+            ('Silver', 'Platinum'): 7,  # Silver to Platinum (Silver->Gold + Gold->Platinum = 2+5)
+            ('Bronze', 'Platinum'): 8,  # Bronze to Platinum (Bronze->Silver + Silver->Gold + Gold->Platinum = 1+2+5)
+            ('Platinum', 'Silver'): -7,  # Platinum to Silver (Platinum->Gold + Gold->Silver = -5-2)
+            ('Gold', 'Bronze'): -3,  # Gold to Bronze (Gold->Silver + Silver->Bronze = -2-1)
+            ('Platinum', 'Bronze'): -8,  # Platinum to Bronze (Platinum->Gold + Gold->Silver + Silver->Bronze = -5-2-1)
+            # Movements to/from Inactive tier
+            ('Inactive', 'Bronze'): 1,
+            ('Inactive', 'Silver'): 3,
+            ('Inactive', 'Gold'): 6,
+            ('Inactive', 'Platinum'): 11,
+            ('Bronze', 'Inactive'): -1,
+            ('Silver', 'Inactive'): -3,
+            ('Gold', 'Inactive'): -6,
+            ('Platinum', 'Inactive'): -11
+        }
+        
+        # Sort data by partner and month to track progression
+        filtered_data = filtered_data.sort_values(['partner_id', 'month'])
+        
+        # Parse the target month
+        target_month = pd.to_datetime(month, format='%b %Y')
+        
+        # Find movements for the specific month
+        movements = []
+        
+        # Group by partner to track their tier changes over time
+        for partner_id, partner_data_group in filtered_data.groupby('partner_id'):
+            partner_months = partner_data_group.sort_values('month')
+            
+            # Track tier changes month over month
+            for i in range(1, len(partner_months)):
+                current_month = partner_months.iloc[i]
+                previous_month = partner_months.iloc[i-1]
+                
+                # Check if this is the target month
+                if current_month['month'] == target_month:
+                    current_tier = current_month['partner_tier']
+                    previous_tier = previous_month['partner_tier']
+                    
+                    # Calculate tier movement score using specific transition values
+                    movement_key = (previous_tier, current_tier)
+                    movement_score = tier_movement_scores.get(movement_key, 0)
+                    
+                    # Apply tier filters if specified
+                    tier_filter_match = True
+                    if from_tier and from_tier != 'All Tiers' and previous_tier != from_tier:
+                        tier_filter_match = False
+                    if to_tier and to_tier != 'All Tiers' and current_tier != to_tier:
+                        tier_filter_match = False
+                    
+                    # Filter by movement type and tier filters
+                    if tier_filter_match:
+                        if movement_type == 'positive' and movement_score > 0:
+                            movements.append({
+                                'partner_id': partner_id,
+                                'from_tier': previous_tier,
+                                'to_tier': current_tier,
+                                'movement_score': movement_score
+                            })
+                        elif movement_type == 'negative' and movement_score < 0:
+                            movements.append({
+                                'partner_id': partner_id,
+                                'from_tier': previous_tier,
+                                'to_tier': current_tier,
+                                'movement_score': movement_score
+                            })
+        
+        # Sort movements by score (most negative first for negative, most positive first for positive)
+        if movement_type == 'positive':
+            movements.sort(key=lambda x: x['movement_score'], reverse=True)
+        else:
+            movements.sort(key=lambda x: x['movement_score'])
+        
+        # Calculate summary
+        total_score = sum(movement['movement_score'] for movement in movements)
+        
+        summary = {
+            'total_movements': len(movements),
+            'total_score': total_score,
+            'movement_type': movement_type,
+            'month': month
+        }
+        
+        movement_details = {
+            'movements': movements,
+            'summary': summary
+        }
+        
+        return jsonify({
+            'success': True,
+            'data': movement_details,
+            'country': country,
+            'region': region,
+            'month': month,
+            'movement_type': movement_type
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting partner tier movement details: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/global-tier-progression-countries', methods=['GET'])
+def get_global_tier_progression_countries():
+    """Get country breakdown for global tier progression scores"""
+    try:
+        global partner_data
+        if partner_data is None:
+            return jsonify({'error': 'No data available'}), 400
+        
+        month = request.args.get('month')
+        movement_type = request.args.get('movement_type')  # 'positive' or 'negative'
+        from_tier = request.args.get('from_tier')
+        to_tier = request.args.get('to_tier')
+        
+        if not month:
+            return jsonify({'error': 'Month parameter is required'}), 400
+        
+        if not movement_type or movement_type not in ['positive', 'negative']:
+            return jsonify({'error': 'Valid movement_type parameter is required (positive or negative)'}), 400
+        
+        # Parse the target month string (e.g., "Jul 2025") to datetime
+        try:
+            month_date = pd.to_datetime(month, format='%b %Y')
+        except ValueError:
+            return jsonify({'error': f'Invalid month format: {month}. Expected format: "Jul 2025"'}), 400
+        
+        # Get all available months in datetime format for finding previous month
+        available_months_dt = partner_data['month'].unique()
+        available_months_dt = sorted(available_months_dt)
+        
+        try:
+            current_month_index = list(available_months_dt).index(month_date)
+        except ValueError:
+            return jsonify({'error': f'Month {month} not found in data'}), 400
+        
+        if current_month_index == 0:
+            return jsonify({'error': f'No previous month data available for {month}'}), 400
+        
+        previous_month_dt = available_months_dt[current_month_index - 1]
+        
+        # Get data for current and previous months
+        current_month_data = partner_data[partner_data['month'] == month_date]
+        previous_month_data = partner_data[partner_data['month'] == previous_month_dt]
+        
+        if current_month_data.empty or previous_month_data.empty:
+            return jsonify({
+                'success': True,
+                'data': {
+                    'countries': [],
+                    'total_countries': 0
+                }
+            })
+        
+        # Define tier movement scores
+        tier_movement_scores = {
+            ('Bronze', 'Silver'): 1,
+            ('Silver', 'Gold'): 2,
+            ('Gold', 'Platinum'): 5,
+            ('Platinum', 'Gold'): -5,
+            ('Gold', 'Silver'): -2,
+            ('Silver', 'Bronze'): -1,
+            ('Bronze', 'Gold'): 3,
+            ('Silver', 'Platinum'): 7,
+            ('Bronze', 'Platinum'): 8,
+            ('Platinum', 'Silver'): -7,
+            ('Gold', 'Bronze'): -3,
+            ('Platinum', 'Bronze'): -8,
+            ('Inactive', 'Bronze'): 1,
+            ('Inactive', 'Silver'): 3,
+            ('Inactive', 'Gold'): 6,
+            ('Inactive', 'Platinum'): 11,
+            ('Bronze', 'Inactive'): -1,
+            ('Silver', 'Inactive'): -3,
+            ('Gold', 'Inactive'): -6,
+            ('Platinum', 'Inactive'): -11
+        }
+        
+        # Use EXACTLY the same algorithm as main endpoint, but group by country
+        # First, run the main algorithm to get all movements for the target month
+        month_str = month_date.strftime('%b %Y')
+        monthly_progression = {}
+        
+        # Run the exact same algorithm as main endpoint
+        for partner_id, partner_data_group in partner_data.groupby('partner_id'):
+            partner_months = partner_data_group.sort_values('month')
+            
+            # Track tier changes month over month
+            for i in range(1, len(partner_months)):
+                current_month = partner_months.iloc[i]
+                previous_month = partner_months.iloc[i-1]
+                
+                current_tier = current_month['partner_tier']
+                previous_tier = previous_month['partner_tier']
+                current_month_str = current_month['month'].strftime('%b %Y')
+                
+                # Only process movements that land in our target month
+                if current_month_str != month_str:
+                    continue
+                
+                # Apply tier filters if specified
+                tier_filter_match = True
+                if from_tier and from_tier != 'All Tiers' and previous_tier != from_tier:
+                    tier_filter_match = False
+                if to_tier and to_tier != 'All Tiers' and current_tier != to_tier:
+                    tier_filter_match = False
+                
+                if not tier_filter_match:
+                    continue
+                
+                # Calculate tier movement score using specific transition values
+                movement_key = (previous_tier, current_tier)
+                movement_score = tier_movement_scores.get(movement_key, 0)
+                
+                # Initialize month data if not exists
+                if month_str not in monthly_progression:
+                    monthly_progression[month_str] = {
+                        'positive_movements': 0,
+                        'negative_movements': 0,
+                        'positive_score': 0,
+                        'negative_score': 0,
+                        'total_partners_with_movement': 0,
+                        'partner_movements': []
+                    }
+                
+                # Track individual partner movements for country breakdown
+                if movement_score != 0:
+                    monthly_progression[month_str]['total_partners_with_movement'] += 1
+                    monthly_progression[month_str]['partner_movements'].append({
+                        'partner_id': partner_id,
+                        'country': current_month['country'],
+                        'from_tier': previous_tier,
+                        'to_tier': current_tier,
+                        'movement_score': movement_score
+                    })
+                    
+                    if movement_score > 0:
+                        monthly_progression[month_str]['positive_movements'] += 1
+                        monthly_progression[month_str]['positive_score'] += movement_score
+                    else:
+                        monthly_progression[month_str]['negative_movements'] += 1
+                        monthly_progression[month_str]['negative_score'] += movement_score
+        
+        # Now group movements by country
+        country_scores = {}
+        if month_str in monthly_progression:
+            for movement in monthly_progression[month_str]['partner_movements']:
+                country = movement['country']
+                movement_score = movement['movement_score']
+                
+                if pd.isna(country):
+                    continue
+                
+                # Only include movements of the requested type
+                if movement_type == 'positive' and movement_score <= 0:
+                    continue
+                if movement_type == 'negative' and movement_score >= 0:
+                    continue
+                
+                # Initialize country if not exists
+                if country not in country_scores:
+                    country_scores[country] = {
+                        'score': 0,
+                        'movement_count': 0
+                    }
+                
+                country_scores[country]['score'] += movement_score
+                country_scores[country]['movement_count'] += 1
+        
+
+        
+        # Sort countries by score
+        if movement_type == 'positive':
+            sorted_countries = sorted(country_scores.items(), key=lambda x: x[1]['score'], reverse=True)
+        else:
+            sorted_countries = sorted(country_scores.items(), key=lambda x: x[1]['score'])
+        
+        # Format response
+        countries_list = []
+        for i, (country, data) in enumerate(sorted_countries, 1):
+            countries_list.append({
+                'rank': i,
+                'country': country,
+                'partners_with_movement': data['movement_count'],
+                'net_movement': data['movement_count'],  # Using movement_count as net_movement for now
+                'score': data['score']
+            })
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'countries': countries_list,
+                'total_countries': len(countries_list)
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting global tier progression countries: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

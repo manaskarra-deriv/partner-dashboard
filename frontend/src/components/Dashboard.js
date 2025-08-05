@@ -40,7 +40,22 @@ const Dashboard = ({
   performanceAnalyticsLoading,
   tierAnalyticsLoading,
   performanceAnalyticsData,
-  tierAnalyticsData
+  tierAnalyticsData,
+  // Partner navigation function
+  navigateToPartnerDetail,
+  // Persistent country analysis state
+  tierAnalyticsDataCountry,
+  setTierAnalyticsDataCountry,
+  monthlyCountryData,
+  setMonthlyCountryData,
+  tierProgressionData,
+  setTierProgressionData,
+  selectedCountry,
+  setSelectedCountry,
+  selectedRegion,
+  setSelectedRegion,
+  countryAnalysisLoading,
+  setCountryAnalysisLoading
 }) => {
   // Use activeTab and setActiveTab from props
   return (
@@ -58,7 +73,7 @@ const Dashboard = ({
             className={`dashboard-tab ${activeTab === 'funnel' ? 'active' : ''}`}
             onClick={() => setActiveTab('funnel')}
           >
-            Application Funnel
+            Country Analysis
           </button>
           <button 
             className={`dashboard-tab ${activeTab === 'management' ? 'active' : ''}`}
@@ -84,34 +99,20 @@ const Dashboard = ({
                 overview={overview} 
                 formatCurrency={formatCurrency}
                 formatNumber={formatNumber}
+                formatVolume={formatVolume}
+                performanceAnalyticsData={performanceAnalyticsData}
+                tierAnalyticsData={tierAnalyticsData}
+                performanceAnalyticsLoading={performanceAnalyticsLoading}
+                tierAnalyticsLoading={tierAnalyticsLoading}
+                navigateToPartnerDetail={navigateToPartnerDetail}
               />
             </section>
           )}
 
-          {/* Performance Analytics Section */}
-          <section className="performance-analytics-section">
-            <PerformanceAnalytics 
-              analytics={performanceAnalyticsData}
-              formatCurrency={formatCurrency}
-              formatNumber={formatNumber}
-              formatVolume={formatVolume}
-              mainLoading={performanceAnalyticsLoading}
-            />
-          </section>
-
-          {/* Tier Analytics Section */}
-          <section className="tier-analytics-section">
-            <TierAnalytics 
-              analytics={tierAnalyticsData}
-              formatCurrency={formatCurrency}
-              formatNumber={formatNumber}
-              formatVolume={formatVolume}
-              mainLoading={tierAnalyticsLoading}
-            />
-          </section>
+          {/* Performance Analytics and Tier Analytics are now integrated into Partner Overview */}
         </div>
 
-        {/* Application Funnel Tab */}
+        {/* Country Analysis Tab */}
         <div className={`tab-content ${activeTab === 'funnel' ? 'active' : ''}`}>
           <section className="application-funnel-section">
             <ApplicationFunnel 
@@ -121,6 +122,20 @@ const Dashboard = ({
               funnelData={funnelData}
               availableCountries={availableCountries}
               availableRegions={availableRegions}
+              navigateToPartnerDetail={navigateToPartnerDetail}
+              // Persistent country analysis state
+              tierAnalyticsDataCountry={tierAnalyticsDataCountry}
+              setTierAnalyticsDataCountry={setTierAnalyticsDataCountry}
+              monthlyCountryData={monthlyCountryData}
+              setMonthlyCountryData={setMonthlyCountryData}
+              tierProgressionData={tierProgressionData}
+              setTierProgressionData={setTierProgressionData}
+              selectedCountry={selectedCountry}
+              setSelectedCountry={setSelectedCountry}
+              selectedRegion={selectedRegion}
+              setSelectedRegion={setSelectedRegion}
+              countryAnalysisLoading={countryAnalysisLoading}
+              setCountryAnalysisLoading={setCountryAnalysisLoading}
             />
           </section>
         </div>
