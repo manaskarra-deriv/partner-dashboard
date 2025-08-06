@@ -929,33 +929,6 @@ def get_tier_analytics():
         logger.error(f"Error getting tier analytics: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-# Helper functions for tier analysis
-def get_tier_rank(tier):
-    """Assign a rank to a partner tier for progression analysis."""
-    tier_ranks = {
-        'Platinum': 4,
-        'Gold': 3,
-        'Silver': 2,
-        'Bronze': 1,
-        'Inactive': 0  # Inactive is the lowest tier
-    }
-    return tier_ranks.get(tier, 0) # Default to 0 if tier not found
-
-def get_tier_progression_status(start_tier, end_tier):
-    """Determine the overall progression status based on start and end tiers."""
-    start_rank = get_tier_rank(start_tier)
-    end_rank = get_tier_rank(end_tier)
-    
-    if start_rank == 0 or end_rank == 0:
-        return "Tier progression analysis unavailable"
-        
-    if end_rank > start_rank:
-        return f"Tier advanced from {start_tier} to {end_tier} (upgrade)"
-    elif end_rank < start_rank:
-        return f"Tier degraded from {start_tier} to {end_tier} (downgrade)"
-    else:
-        return "Tier remained the same"
-
 # Initialize data on startup
 load_csv_data()
 
@@ -2500,14 +2473,31 @@ def get_partner_tier_progression():
             
             # Add pre-calculated country breakdowns for global requests
             if is_global and month_data['country_breakdowns']:
+                # Calculate true net movement for each country (positive - negative)
+                true_country_net = {}
+                
+                # Count positive movements per country
+                for country, data in month_data['country_breakdowns']['positive'].items():
+                    if country not in true_country_net:
+                        true_country_net[country] = {'positive': 0, 'negative': 0}
+                    true_country_net[country]['positive'] = data['movement_count']
+                
+                # Count negative movements per country  
+                for country, data in month_data['country_breakdowns']['negative'].items():
+                    if country not in true_country_net:
+                        true_country_net[country] = {'positive': 0, 'negative': 0}
+                    true_country_net[country]['negative'] = data['movement_count']
+                
                 # Sort positive countries by score (highest first)
                 positive_countries = []
                 for country, data in month_data['country_breakdowns']['positive'].items():
+                    true_net = true_country_net[country]['positive'] - true_country_net[country]['negative']
+                    total_movements = true_country_net[country]['positive'] + true_country_net[country]['negative']
                     positive_countries.append({
                         'rank': 0,  # Will be set below
                         'country': country,
-                        'partners_with_movement': data['movement_count'],
-                        'net_movement': data['movement_count'],
+                        'partners_with_movement': total_movements,  # Total movements (positive + negative)
+                        'net_movement': true_net,  # True net movement (positive - negative)
                         'score': data['score']
                     })
                 positive_countries.sort(key=lambda x: x['score'], reverse=True)
@@ -2517,11 +2507,13 @@ def get_partner_tier_progression():
                 # Sort negative countries by score (most negative first)
                 negative_countries = []
                 for country, data in month_data['country_breakdowns']['negative'].items():
+                    true_net = true_country_net[country]['positive'] - true_country_net[country]['negative']
+                    total_movements = true_country_net[country]['positive'] + true_country_net[country]['negative']
                     negative_countries.append({
                         'rank': 0,  # Will be set below
                         'country': country,
-                        'partners_with_movement': data['movement_count'],
-                        'net_movement': data['movement_count'],
+                        'partners_with_movement': total_movements,  # Total movements (positive + negative)
+                        'net_movement': true_net,  # True net movement (positive - negative)
                         'score': data['score']
                     })
                 negative_countries.sort(key=lambda x: x['score'])  # Most negative first
@@ -2924,6 +2916,8 @@ def get_global_tier_progression_countries():
         
         # Now group movements by country
         country_scores = {}
+        country_total_movements = {}  # Track total movements regardless of type
+        
         if month_str in monthly_progression:
             for movement in monthly_progression[month_str]['partner_movements']:
                 country = movement['country']
@@ -2932,18 +2926,23 @@ def get_global_tier_progression_countries():
                 if pd.isna(country):
                     continue
                 
-                # Only include movements of the requested type
-                if movement_type == 'positive' and movement_score <= 0:
-                    continue
-                if movement_type == 'negative' and movement_score >= 0:
-                    continue
-                
                 # Initialize country if not exists
                 if country not in country_scores:
                     country_scores[country] = {
                         'score': 0,
                         'movement_count': 0
                     }
+                if country not in country_total_movements:
+                    country_total_movements[country] = 0
+                
+                # Count ALL movements for this country (for Partners with Movement)
+                country_total_movements[country] += 1
+                
+                # Only include movements of the requested type for scoring/ranking
+                if movement_type == 'positive' and movement_score <= 0:
+                    continue
+                if movement_type == 'negative' and movement_score >= 0:
+                    continue
                 
                 country_scores[country]['score'] += movement_score
                 country_scores[country]['movement_count'] += 1
@@ -2956,14 +2955,39 @@ def get_global_tier_progression_countries():
         else:
             sorted_countries = sorted(country_scores.items(), key=lambda x: x[1]['score'])
         
+        # Calculate true net movement for each country (considering ALL movements, not just filtered ones)
+        true_net_movements = {}
+        if month_str in monthly_progression:
+            for movement in monthly_progression[month_str]['partner_movements']:
+                country = movement['country']
+                movement_score = movement['movement_score']
+                
+                if pd.isna(country):
+                    continue
+                
+                if country not in true_net_movements:
+                    true_net_movements[country] = {'positive_count': 0, 'negative_count': 0}
+                
+                if movement_score > 0:
+                    true_net_movements[country]['positive_count'] += 1
+                elif movement_score < 0:
+                    true_net_movements[country]['negative_count'] += 1
+        
         # Format response
         countries_list = []
         for i, (country, data) in enumerate(sorted_countries, 1):
+            # Calculate true net movement (positive count - negative count)
+            country_net_data = true_net_movements.get(country, {'positive_count': 0, 'negative_count': 0})
+            true_net_movement = country_net_data['positive_count'] - country_net_data['negative_count']
+            
+            # Use total movement count (all movements) instead of filtered count
+            total_movements = country_total_movements.get(country, data['movement_count'])
+            
             countries_list.append({
                 'rank': i,
                 'country': country,
-                'partners_with_movement': data['movement_count'],
-                'net_movement': data['movement_count'],  # Using movement_count as net_movement for now
+                'partners_with_movement': total_movements,
+                'net_movement': true_net_movement,
                 'score': data['score']
             })
         
