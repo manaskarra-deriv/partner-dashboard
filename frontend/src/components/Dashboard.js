@@ -32,7 +32,6 @@ const Dashboard = ({
   onPageChange,
   funnelData,
   availableCountries,
-  availableRegions,
   activeTab,
   setActiveTab,
   // New separate loading states and data
@@ -56,8 +55,6 @@ const Dashboard = ({
   setTierProgressionData,
   selectedCountry,
   setSelectedCountry,
-  selectedRegion,
-  setSelectedRegion,
   countryAnalysisLoading,
   setCountryAnalysisLoading
 }) => {
@@ -128,7 +125,6 @@ const Dashboard = ({
               mainLoading={loading}
               funnelData={funnelData}
               availableCountries={availableCountries}
-              availableRegions={availableRegions}
               navigateToPartnerDetail={navigateToPartnerDetail}
               // Persistent country analysis state
               tierAnalyticsDataCountry={tierAnalyticsDataCountry}
@@ -139,8 +135,6 @@ const Dashboard = ({
               setTierProgressionData={setTierProgressionData}
               selectedCountry={selectedCountry}
               setSelectedCountry={setSelectedCountry}
-              selectedRegion={selectedRegion}
-              setSelectedRegion={setSelectedRegion}
               countryAnalysisLoading={countryAnalysisLoading}
               setCountryAnalysisLoading={setCountryAnalysisLoading}
             />

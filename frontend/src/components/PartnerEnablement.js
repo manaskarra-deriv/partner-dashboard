@@ -4,7 +4,6 @@ import { API_BASE_URL } from '../config';
 
 const PartnerEnablement = ({ 
   selectedCountry, 
-  selectedRegion, 
   formatNumber, 
   navigateToPartnerDetail,
   tierProgressionData,
@@ -31,8 +30,8 @@ const PartnerEnablement = ({
   const availableTiers = ['All Tiers', 'Bronze', 'Silver', 'Gold', 'Platinum'];
 
   // Fetch tier progression data
-  const fetchTierProgressionData = async (country, region, fromTier = 'All Tiers', toTier = 'All Tiers') => {
-    if (!country?.trim() && !region?.trim()) return;
+  const fetchTierProgressionData = async (country, fromTier = 'All Tiers', toTier = 'All Tiers') => {
+    if (!country?.trim()) return;
     
     setCountryAnalysisLoading(prev => ({ ...prev, progression: true }));
     setError(null);
@@ -40,7 +39,6 @@ const PartnerEnablement = ({
     try {
       const params = new URLSearchParams();
       if (country?.trim()) params.append('country', country.trim());
-      if (region?.trim()) params.append('region', region.trim());
       if (fromTier !== 'All Tiers') params.append('from_tier', fromTier);
       if (toTier !== 'All Tiers') params.append('to_tier', toTier);
       
@@ -49,7 +47,7 @@ const PartnerEnablement = ({
       
       if (response.data.success) {
         setTierProgressionData(response.data.data);
-        setCurrentDataSelection({ country, region, fromTier, toTier }); // Track which selection this data belongs to
+        setCurrentDataSelection({ country, fromTier, toTier }); // Track which selection this data belongs to
       } else {
         setError('Failed to fetch tier progression data');
       }
@@ -63,25 +61,24 @@ const PartnerEnablement = ({
     }
   };
 
-  // Effect to fetch data when country/region or applied filters change
+  // Effect to fetch data when country or applied filters change
   useEffect(() => {
-    if (selectedCountry?.trim() || selectedRegion?.trim()) {
+    if (selectedCountry?.trim()) {
       // Check if we need to fetch data for this selection
       const needsFetch = !tierProgressionData || 
                         !currentDataSelection ||
                         currentDataSelection.country !== selectedCountry ||
-                        currentDataSelection.region !== selectedRegion ||
                         currentDataSelection.fromTier !== appliedFromTier ||
                         currentDataSelection.toTier !== appliedToTier;
       
       if (needsFetch) {
-        fetchTierProgressionData(selectedCountry, selectedRegion, appliedFromTier, appliedToTier);
+        fetchTierProgressionData(selectedCountry, appliedFromTier, appliedToTier);
       }
     } else {
       setTierProgressionData(null);
       setCurrentDataSelection(null);
     }
-  }, [selectedCountry, selectedRegion, appliedFromTier, appliedToTier]);
+  }, [selectedCountry, appliedFromTier, appliedToTier]);
 
   // Helper function to get movement badge class
   const getMovementClass = (score) => {
@@ -106,14 +103,13 @@ const PartnerEnablement = ({
 
   // Fetch detailed movement data for a specific month and movement type
   const fetchMovementDetails = async (month, movementType) => {
-    if (!selectedCountry && !selectedRegion) return;
+    if (!selectedCountry) return;
     
     setMovementModalLoading(true);
     
     try {
       const params = new URLSearchParams();
       if (selectedCountry) params.append('country', selectedCountry);
-      if (selectedRegion) params.append('region', selectedRegion);
       params.append('month', month);
       params.append('movement_type', movementType);
       // Add tier filters to movement details
@@ -184,11 +180,11 @@ const PartnerEnablement = ({
       {/* Header with Filter */}
       <div className="section-header-with-controls">
         <div className="section-header-left">
-          <h2 className="heading-lg">Partner Enablement - {selectedCountry || selectedRegion}</h2>
+          <h2 className="heading-lg">Partner Enablement - {selectedCountry}</h2>
         </div>
         
         {/* Always show filter once we have country/region selected */}
-        {(selectedCountry || selectedRegion) && (
+        {selectedCountry && (
           <div className="tier-filter">
             <div className="filter-controls">
               <div className="tier-transition-container">
@@ -235,7 +231,7 @@ const PartnerEnablement = ({
         )}
         
         <div className="section-header-right">
-          <p className="text-secondary">Tier progression tracking with weighted net movement for {selectedCountry || selectedRegion}</p>
+          <p className="text-secondary">Tier progression tracking with weighted net movement for {selectedCountry}</p>
         </div>
       </div>
 
@@ -388,7 +384,7 @@ const PartnerEnablement = ({
               <h3>
                 {selectedMovementData?.movementType === 'positive' ? 'Positive' : 'Negative'} Tier Movements - {selectedMovementData?.month}
                 <div className="modal-subtitle">
-                  {selectedCountry || selectedRegion} - Click on Partner ID to view details
+                  {selectedCountry} - Click on Partner ID to view details
                 </div>
               </h3>
               <button className="modal-close" onClick={closeMovementModal}>×</button>

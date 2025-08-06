@@ -637,7 +637,6 @@ function App() {
               onPageChange={handlePageChange}
               funnelData={funnelData}
               availableCountries={availableCountries}
-              availableRegions={availableRegions}
               activeTab={activeTab}
               setActiveTab={setActiveTab}
               performanceAnalyticsLoading={performanceAnalyticsLoading}
@@ -660,8 +659,6 @@ function App() {
               setTierProgressionData={setTierProgressionData}
               selectedCountry={selectedCountry}
               setSelectedCountry={setSelectedCountry}
-              selectedRegion={selectedRegion}
-              setSelectedRegion={setSelectedRegion}
               countryAnalysisLoading={countryAnalysisLoading}
               setCountryAnalysisLoading={setCountryAnalysisLoading}
             />

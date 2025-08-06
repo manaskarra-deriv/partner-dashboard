@@ -10,7 +10,6 @@ const ApplicationFunnel = ({
   mainLoading = false, 
   funnelData, 
   availableCountries, 
-  availableRegions, 
   navigateToPartnerDetail,
   // Persistent state from App.js
   tierAnalyticsDataCountry: tierAnalyticsData,
@@ -21,8 +20,6 @@ const ApplicationFunnel = ({
   setTierProgressionData,
   selectedCountry,
   setSelectedCountry,
-  selectedRegion,
-  setSelectedRegion,
   countryAnalysisLoading,
   setCountryAnalysisLoading
 }) => {
@@ -426,7 +423,7 @@ const ApplicationFunnel = ({
 
   // Data fetching functions
   // Fetch tier analytics only
-  const fetchTierAnalytics = async (country, region, includeRankings = false) => {
+  const fetchTierAnalytics = async (country, includeRankings = false) => {
     const loadingKey = includeRankings ? 'rankings' : 'tier';
     if (includeRankings) {
       setRankingsLoading(true);
@@ -437,7 +434,6 @@ const ApplicationFunnel = ({
     try {
       const params = new URLSearchParams();
       if (country) params.append('country', country);
-      if (region) params.append('region', region);
       params.append('include_rankings', includeRankings.toString());
       
       console.log(`🔍 Fetching tier analytics with rankings: ${includeRankings}`);
@@ -461,13 +457,12 @@ const ApplicationFunnel = ({
   };
 
   // Fetch monthly trends only
-  const fetchMonthlyCountryData = async (country, region) => {
-    console.log('🔍 fetchMonthlyCountryData called:', { country, region });
+  const fetchMonthlyCountryData = async (country) => {
+    console.log('🔍 fetchMonthlyCountryData called:', { country });
     setCountryAnalysisLoading(prev => ({ ...prev, monthly: true }));
     try {
       const params = new URLSearchParams();
       if (country) params.append('country', country);
-      if (region) params.append('region', region);
       const url = `${API_BASE_URL}/api/monthly-country-funnel?${params}`;
       console.log('🔍 Making API call:', url);
       const response = await axios.get(url);
@@ -484,24 +479,24 @@ const ApplicationFunnel = ({
   };
 
   // Fetch both, but independently
-  const fetchAllCountryData = async (country, region) => {
-    if (!country && !region) return;
+  const fetchAllCountryData = async (country) => {
+    if (!country) return;
     // Initial load without rankings for fast performance
-    fetchTierAnalytics(country, region, false);
-    fetchMonthlyCountryData(country, region);
+    fetchTierAnalytics(country, false);
+    fetchMonthlyCountryData(country);
   };
 
   // Toggle rankings function
   const handleToggleRankings = async (e) => {
     const isChecked = e.target.checked;
-    if (isChecked && (selectedCountry || selectedRegion)) {
+            if (isChecked && selectedCountry) {
       if (rankingsDataLoaded) {
         // Rankings data already exists, just show it
         setShowRankings(true);
       } else {
         // Need to fetch rankings data first
         setRankingsLoading(true);
-        await fetchTierAnalytics(selectedCountry, selectedRegion, true);
+        await fetchTierAnalytics(selectedCountry, true);
       }
     } else {
       // Just toggle off rankings (keep existing data but hide rankings)
@@ -514,7 +509,6 @@ const ApplicationFunnel = ({
       setModalLoading(true);
       const params = new URLSearchParams();
       if (selectedCountry) params.append('country', selectedCountry);
-      if (selectedRegion) params.append('region', selectedRegion);
       if (tier) params.append('tier', tier);
       
       console.log('Fetching tier detail with URL:', `${API_BASE_URL}/api/tier-performance?${params}`);
@@ -537,7 +531,6 @@ const ApplicationFunnel = ({
     const country = e.target.value;
     console.log('🔍 handleCountryChange called with:', country);
     setSelectedCountry(country);
-    setSelectedRegion(''); // Clear region when country is selected
     
     // Clear previous data when switching
     setTierAnalyticsData(null);
@@ -547,30 +540,12 @@ const ApplicationFunnel = ({
     
     if (country) {
       console.log('🔍 Calling fetchAllCountryData for country:', country);
-      fetchAllCountryData(country, null);
-    }
-  };
-
-  const handleRegionChange = (e) => {
-    const region = e.target.value;
-    console.log('🔍 handleRegionChange called with:', region);
-    setSelectedRegion(region);
-    setSelectedCountry(''); // Clear country when region is selected
-    
-    // Clear previous data when switching
-    setTierAnalyticsData(null);
-    setMonthlyCountryData(null);
-    setShowRankings(false); // Reset rankings toggle
-    setRankingsDataLoaded(false); // Reset rankings data state
-    
-    if (region) {
-      console.log('🔍 Calling fetchAllCountryData for region:', region);
-      fetchAllCountryData(null, region);
+      fetchAllCountryData(country);
     }
   };
 
   const handleTierClick = (tier, month = null) => {
-    console.log('Tier clicked:', tier, 'Month:', month, 'Country:', selectedCountry, 'Region:', selectedRegion);
+    console.log('Tier clicked:', tier, 'Month:', month, 'Country:', selectedCountry);
     setClickedTier(tier);
     fetchTierDetail(tier, month);
   };
@@ -818,19 +793,19 @@ const ApplicationFunnel = ({
   return (
     <div className="application-funnel-section">
       <div className="analytics-header">
-        <h2 className="heading-lg">Country/Region Analysis</h2>
-        <p className="text-secondary">Country and GP region focused partner application analysis with tier breakdown and rankings</p>
+        <h2 className="heading-lg">Country Analysis</h2>
+        <p className="text-secondary">Country focused partner application analysis with tier breakdown and rankings</p>
       </div>
       
       <div className="application-funnel-content">
-        {/* Country/Region Selector */}
+        {/* Country Selector */}
         <div className="location-selector">
           <div className="selector-group">
             <label className="filter-label">Select Country</label>
             <select 
               value={selectedCountry} 
               onChange={handleCountryChange}
-              disabled={tierLoading || selectedRegion}
+              disabled={tierLoading}
               className="location-select"
             >
               <option value="">-- Select Country --</option>
@@ -839,42 +814,26 @@ const ApplicationFunnel = ({
               ))}
             </select>
           </div>
-          <div className="selector-divider">OR</div>
-          <div className="selector-group">
-            <label className="filter-label">Select GP Region</label>
-            <select 
-              value={selectedRegion} 
-              onChange={handleRegionChange}
-              disabled={tierLoading || selectedCountry}
-              className="location-select"
-            >
-              <option value="">-- Select GP Region --</option>
-              { (availableRegions || []).map(region => (
-                <option key={region} value={region}>{region}</option>
-              ))}
-            </select>
-          </div>
           <button
             className="btn btn-sm btn-ghost location-reset-btn"
             style={{ marginLeft: 16, alignSelf: 'flex-end', height: 36 }}
             onClick={() => {
               setSelectedCountry('');
-              setSelectedRegion('');
             }}
-            disabled={(!selectedCountry && !selectedRegion) || tierLoading}
+            disabled={!selectedCountry || tierLoading}
           >
             Reset
           </button>
         </div>
 
-        {(selectedCountry || selectedRegion) && (
+        {selectedCountry && (
           <>
                                      {tierLoading ? (
               <div className="loading-state">Loading monthly performance trends...</div>
             ) : tierAnalyticsData?.monthly_tier_data ? (
               <div className="performance-trends-section">
                 <div className="performance-header">
-                  <h3 className="performance-title">Monthly Performance Trends - {selectedCountry || selectedRegion}</h3>
+                  <h3 className="performance-title">Monthly Performance Trends - {selectedCountry}</h3>
                 </div>
 
                 <div className="performance-content">
@@ -1146,7 +1105,7 @@ const ApplicationFunnel = ({
             <div className="section-divider">
               <div className="section-header-with-toggle">
                 <div className="section-header-content">
-                  <h3 className="section-title">Tier Analytics - {selectedCountry || selectedRegion}</h3>
+                  <h3 className="section-title">Tier Analytics - {selectedCountry}</h3>
                   <p className="section-subtitle">Comprehensive tier breakdown with rankings and performance metrics</p>
                 </div>
                 <div className="view-toggle">
@@ -1377,14 +1336,13 @@ const ApplicationFunnel = ({
 
             {/* Partner Enablement Section */}
             <div className="section-divider">
-              <h3 className="section-title">Partner Enablement - {selectedCountry || selectedRegion}</h3>
+              <h3 className="section-title">Partner Enablement - {selectedCountry}</h3>
               <p className="section-subtitle">Tier progression tracking with weighted net movement across all tiers on a monthly basis</p>
             </div>
 
             {/* Partner Enablement Content */}
             <PartnerEnablement 
               selectedCountry={selectedCountry}
-              selectedRegion={selectedRegion}
               formatNumber={formatNumber}
               navigateToPartnerDetail={navigateToPartnerDetail}
               tierProgressionData={tierProgressionData}
@@ -1395,7 +1353,7 @@ const ApplicationFunnel = ({
 
             {/* Monthly Trends Table */}
             <div className="section-divider">
-              <h3 className="section-title">Application Funnel - {selectedCountry || selectedRegion}</h3>
+              <h3 className="section-title">Application Funnel - {selectedCountry}</h3>
               <p className="section-subtitle">All months showing progression from application to client acquisition and earning generation</p>
             </div>
 
@@ -1499,11 +1457,11 @@ const ApplicationFunnel = ({
           </>
         )}
 
-        {!selectedCountry && !selectedRegion && (
+        {!selectedCountry && (
           <div className="selection-prompt">
             <div className="prompt-content">
-              <h3>Select a Country or GP Region</h3>
-              <p>Choose a country or GP region above to view detailed application funnel and tier analytics data.</p>
+              <h3>Select a Country</h3>
+              <p>Choose a country above to view detailed application funnel and tier analytics data.</p>
             </div>
           </div>
         )}
@@ -1514,7 +1472,7 @@ const ApplicationFunnel = ({
             <div className="tier-modal" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
                 <h3>
-                  {selectedTier} Tier Performance - {selectedCountry || selectedRegion}
+                  {selectedTier} Tier Performance - {selectedCountry}
                   <div className="modal-subtitle">Ranked by tier by country, subscript text</div>
                 </h3>
                 <button className="modal-close" onClick={closeTierModal}>×</button>
