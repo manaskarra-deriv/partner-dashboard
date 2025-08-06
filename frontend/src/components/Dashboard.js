@@ -5,7 +5,6 @@ import TierAnalytics from './TierAnalytics';
 import ApplicationFunnel from './ApplicationFunnel';
 import PartnerTable from './PartnerTable';
 import PartnerFilters from './PartnerFilters';
-import AICopilot from './AICopilot';
 
 const Dashboard = ({ 
   overview, 
@@ -192,16 +191,6 @@ const Dashboard = ({
           </section>
         </div>
       </div>
-
-      {/* AI Copilot for Dashboard Insights - Always visible */}
-      <AICopilot 
-        context="dashboard"
-        data={{
-          overview,
-          partners: partners.slice(0, 10), // Top 10 partners for analysis
-          activeFilters
-        }}
-      />
     </div>
   );
 };

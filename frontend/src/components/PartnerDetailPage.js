@@ -3,7 +3,6 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 import PartnerDetail from './PartnerDetail';
-import AICopilot from './AICopilot';
 import LoadingScreen from './LoadingScreen';
 
 const PartnerDetailPage = ({ formatCurrency, formatNumber, formatVolume, getTierColor, onBack }) => {
@@ -85,18 +84,6 @@ const PartnerDetailPage = ({ formatCurrency, formatNumber, formatVolume, getTier
         getTierColor={getTierColor}
         onBack={handleBackToDashboard}
       />
-      
-      {/* AI Copilot for Partner Detail Insights */}
-      {partner && (
-        <AICopilot 
-          context="partner_detail"
-          data={{
-            partner_info: partner.partner_info,
-            monthly_performance: partner.monthly_performance,
-            current_month: partner.current_month
-          }}
-        />
-      )}
     </>
   );
 };
