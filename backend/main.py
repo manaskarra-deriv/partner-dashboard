@@ -2383,7 +2383,7 @@ def get_partner_tier_progression():
                         'negative_score': 0,
                         'total_partners_with_movement': 0,
                         'partner_movements': [],
-                        # Add country breakdown tracking for global requests
+                        # Add country breakdown tracking for global requests (including filtered)
                         'country_breakdowns': {
                             'positive': {},  # {country: {score: X, movement_count: Y}}
                             'negative': {}   # {country: {score: X, movement_count: Y}}
@@ -2472,7 +2472,7 @@ def get_partner_tier_progression():
             }
             
             # Add pre-calculated country breakdowns for global requests
-            if is_global and month_data['country_breakdowns']:
+            if is_global and month_data.get('country_breakdowns') is not None:
                 # Calculate true net movement for each country (positive + negative scores)
                 true_country_net = {}
                 
