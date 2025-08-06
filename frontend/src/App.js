@@ -95,12 +95,45 @@ function App() {
   // Add state for active tab
   const [activeTab, setActiveTab] = useState('overview');
 
+  // Global Partner Enablement preloading state
+  const [globalTierProgressionData, setGlobalTierProgressionData] = useState(null);
+  const [globalProgressionLoading, setGlobalProgressionLoading] = useState(true);
+  const [preloadingProgress, setPreloadingProgress] = useState(0);
+
+  // Fetch global partner enablement data
+  const fetchGlobalTierProgressionData = async () => {
+    try {
+      setGlobalProgressionLoading(true);
+      setPreloadingProgress(50); // Show progress during API call
+      
+      const params = new URLSearchParams();
+      params.append('is_global', 'true');
+      const url = `${API_BASE_URL}/api/partner-tier-progression?${params.toString()}`;
+      
+      console.log('🔍 Preloading global tier progression data...');
+      const response = await axios.get(url);
+      
+      if (response.data.success) {
+        setGlobalTierProgressionData(response.data.data);
+        setPreloadingProgress(100);
+        console.log('✅ Global tier progression data preloaded successfully');
+      } else {
+        console.error('❌ Failed to preload global tier progression data');
+      }
+    } catch (err) {
+      console.error('❌ Error preloading global tier progression data:', err);
+    } finally {
+      setGlobalProgressionLoading(false);
+    }
+  };
+
   // Fetch all three modules in parallel on mount
   useEffect(() => {
     fetchOverview();
     fetchPartners(activeFilters, 1);
     fetchFilters();
     fetchTierAnalytics();
+    fetchGlobalTierProgressionData(); // Preload global partner enablement data
     // Simulate Partner Management loading
     setPartnerMgmtLoading(true);
     setTimeout(() => setPartnerMgmtLoading(false), 1200);
@@ -190,6 +223,26 @@ function App() {
     }
   };
 
+  // Fetch all filtered partners for CSV export (no pagination)
+  const fetchAllFilteredPartners = async () => {
+    try {
+      console.log('🔄 Fetching all filtered partners for export...');
+      const params = {
+        ...activeFilters,
+        sort_by: sortField,
+        sort_order: sortDirection,
+        limit: 10000, // Large limit to get all records
+        offset: 0
+      };
+      const response = await axios.get(`${API_BASE_URL}/api/partners`, { params });
+      console.log(`✅ Fetched ${response.data.partners.length} partners for export`);
+      return response.data.partners;
+    } catch (err) {
+      console.error('❌ Error fetching all partners for export:', err);
+      throw new Error('Failed to fetch partners for export');
+    }
+  };
+
   const fetchFilters = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/filters`);
@@ -262,9 +315,27 @@ function App() {
   };
 
   // Progress calculation for splash
-  const modulesLoaded = [!overviewLoading, !funnelLoading, !partnerMgmtLoading, !funnelInitialLoading, !performanceAnalyticsLoading, !tierAnalyticsLoading].filter(Boolean).length;
-  const progress = Math.round((modulesLoaded / 6) * 100);
-  const allLoaded = modulesLoaded === 6;
+  const modulesLoaded = [
+    !overviewLoading, 
+    !funnelLoading, 
+    !partnerMgmtLoading, 
+    !funnelInitialLoading, 
+    !performanceAnalyticsLoading, 
+    !tierAnalyticsLoading,
+    !globalProgressionLoading
+  ].filter(Boolean).length;
+  
+  // Calculate progress with global enablement weighting (it's the slowest)
+  let progress = Math.round((modulesLoaded / 7) * 80); // Base progress up to 80%
+  
+  // Add extra progress for global enablement data
+  if (globalProgressionLoading && preloadingProgress > 0) {
+    progress += Math.round((preloadingProgress / 100) * 20); // Final 20% for global data
+  } else if (!globalProgressionLoading) {
+    progress = 100;
+  }
+  
+  const allLoaded = modulesLoaded === 7;
 
   // Show splash screen with progress bar until all loaded
   if (!allLoaded) {
@@ -575,6 +646,11 @@ function App() {
               tierAnalyticsData={tierAnalyticsData}
               onRequestPIIAccess={handleRequestPIIAccess}
               navigateToPartnerDetail={navigateToPartnerDetail}
+              // Global Partner Enablement preloaded data
+              globalTierProgressionData={globalTierProgressionData}
+              globalProgressionLoading={globalProgressionLoading}
+              // CSV Export function
+              onExportCSV={fetchAllFilteredPartners}
               // Persistent country analysis state
               tierAnalyticsDataCountry={tierAnalyticsDataCountry}
               setTierAnalyticsDataCountry={setTierAnalyticsDataCountry}

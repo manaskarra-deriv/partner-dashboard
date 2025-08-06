@@ -6179,3 +6179,40 @@ body {
   display: inline-block;
   min-width: 2.5rem;
 }
+
+/* Export CSV Button */
+.export-csv-btn {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(22, 163, 74, 0.2);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.export-csv-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25);
+}
+
+.export-csv-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(22, 163, 74, 0.2);
+}
+
+.export-csv-btn:disabled {
+  background: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  opacity: 0.7;
+}

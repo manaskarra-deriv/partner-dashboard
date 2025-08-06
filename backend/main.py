@@ -2798,7 +2798,7 @@ def get_partner_tier_progression():
         region = request.args.get('region')
         from_tier = request.args.get('from_tier')
         to_tier = request.args.get('to_tier')
-        is_global = request.args.get('is_global', 'false').lower() == 'true'
+        is_global: bool = request.args.get('is_global', 'false').lower() == 'true'
         
         # Handle URL encoding where + should become spaces
         if region:
@@ -2913,7 +2913,12 @@ def get_partner_tier_progression():
                         'positive_score': 0,
                         'negative_score': 0,
                         'total_partners_with_movement': 0,
-                        'partner_movements': []
+                        'partner_movements': [],
+                        # Add country breakdown tracking for global requests
+                        'country_breakdowns': {
+                            'positive': {},  # {country: {score: X, movement_count: Y}}
+                            'negative': {}   # {country: {score: X, movement_count: Y}}
+                        } if is_global else None
                     }
                 
                 # Track individual partner movements for detailed analysis
@@ -2929,9 +2934,31 @@ def get_partner_tier_progression():
                     if movement_score > 0:
                         monthly_progression[month_str]['positive_movements'] += 1
                         monthly_progression[month_str]['positive_score'] += movement_score
+                        
+                        # Track country breakdown for positive movements (global only)
+                        if is_global and monthly_progression[month_str]['country_breakdowns']:
+                            country = current_month['country']
+                            if pd.notna(country):
+                                if country not in monthly_progression[month_str]['country_breakdowns']['positive']:
+                                    monthly_progression[month_str]['country_breakdowns']['positive'][country] = {
+                                        'score': 0, 'movement_count': 0
+                                    }
+                                monthly_progression[month_str]['country_breakdowns']['positive'][country]['score'] += movement_score
+                                monthly_progression[month_str]['country_breakdowns']['positive'][country]['movement_count'] += 1
                     else:
                         monthly_progression[month_str]['negative_movements'] += 1
                         monthly_progression[month_str]['negative_score'] += movement_score
+                        
+                        # Track country breakdown for negative movements (global only)
+                        if is_global and monthly_progression[month_str]['country_breakdowns']:
+                            country = current_month['country']
+                            if pd.notna(country):
+                                if country not in monthly_progression[month_str]['country_breakdowns']['negative']:
+                                    monthly_progression[month_str]['country_breakdowns']['negative'][country] = {
+                                        'score': 0, 'movement_count': 0
+                                    }
+                                monthly_progression[month_str]['country_breakdowns']['negative'][country]['score'] += movement_score
+                                monthly_progression[month_str]['country_breakdowns']['negative'][country]['movement_count'] += 1
         
         # Calculate weighted net movement for each month
         formatted_monthly_data = []
@@ -2948,6 +2975,21 @@ def get_partner_tier_progression():
             weighted_net_movement = month_data['positive_score'] + month_data['negative_score']
             
             # Remove detailed partner movements from the response (too much data)
+            # But add tier transition summaries for client-side filtering
+            tier_transitions = {}
+            if is_global:
+                for movement in month_data['partner_movements']:
+                    transition_key = f"{movement['from_tier']} -> {movement['to_tier']}"
+                    if transition_key not in tier_transitions:
+                        tier_transitions[transition_key] = {
+                            'count': 0,
+                            'total_score': 0,
+                            'from_tier': movement['from_tier'],
+                            'to_tier': movement['to_tier']
+                        }
+                    tier_transitions[transition_key]['count'] += 1
+                    tier_transitions[transition_key]['total_score'] += movement['movement_score']
+            
             monthly_summary = {
                 'month': month_str,
                 'positive_movements': month_data['positive_movements'],
@@ -2955,8 +2997,48 @@ def get_partner_tier_progression():
                 'positive_score': month_data['positive_score'],
                 'negative_score': month_data['negative_score'],
                 'weighted_net_movement': weighted_net_movement,
-                'total_partners_with_movement': month_data['total_partners_with_movement']
+                'total_partners_with_movement': month_data['total_partners_with_movement'],
+                # Add tier transitions for client-side filtering
+                'tier_transitions': tier_transitions if is_global else None
             }
+            
+            # Add pre-calculated country breakdowns for global requests
+            if is_global and month_data['country_breakdowns']:
+                # Sort positive countries by score (highest first)
+                positive_countries = []
+                for country, data in month_data['country_breakdowns']['positive'].items():
+                    positive_countries.append({
+                        'rank': 0,  # Will be set below
+                        'country': country,
+                        'partners_with_movement': data['movement_count'],
+                        'net_movement': data['movement_count'],
+                        'score': data['score']
+                    })
+                positive_countries.sort(key=lambda x: x['score'], reverse=True)
+                for i, country_data in enumerate(positive_countries, 1):
+                    country_data['rank'] = i
+                
+                # Sort negative countries by score (most negative first)
+                negative_countries = []
+                for country, data in month_data['country_breakdowns']['negative'].items():
+                    negative_countries.append({
+                        'rank': 0,  # Will be set below
+                        'country': country,
+                        'partners_with_movement': data['movement_count'],
+                        'net_movement': data['movement_count'],
+                        'score': data['score']
+                    })
+                negative_countries.sort(key=lambda x: x['score'])  # Most negative first
+                for i, country_data in enumerate(negative_countries, 1):
+                    country_data['rank'] = i
+                
+                monthly_summary['country_breakdowns'] = {
+                    'positive': positive_countries,
+                    'negative': negative_countries
+                }
+                
+                # Debug logging for country breakdowns
+                print(f"🔍 {month_str}: {len(positive_countries)} positive countries, {len(negative_countries)} negative countries")
             
             formatted_monthly_data.append(monthly_summary)
             total_positive_score += month_data['positive_score']
@@ -2977,6 +3059,11 @@ def get_partner_tier_progression():
             'monthly_progression': formatted_monthly_data,
             'summary': summary
         }
+        
+        # Debug logging for global requests with country breakdowns
+        if is_global:
+            total_months_with_breakdowns = sum(1 for month in formatted_monthly_data if 'country_breakdowns' in month)
+            print(f"🌍 Global response: {len(formatted_monthly_data)} months, {total_months_with_breakdowns} with country breakdowns")
         
         return jsonify({
             'success': True,
@@ -3176,6 +3263,9 @@ def get_global_tier_progression_countries():
         if partner_data is None:
             return jsonify({'error': 'No data available'}), 400
         
+        # This function always deals with global data
+        is_global: bool = True
+        
         month = request.args.get('month')
         movement_type = request.args.get('movement_type')  # 'positive' or 'negative'
         from_tier = request.args.get('from_tier')
@@ -3288,7 +3378,12 @@ def get_global_tier_progression_countries():
                         'positive_score': 0,
                         'negative_score': 0,
                         'total_partners_with_movement': 0,
-                        'partner_movements': []
+                        'partner_movements': [],
+                        # Add country breakdown tracking (always enabled for global requests)
+                        'country_breakdowns': {
+                            'positive': {},  # {country: {score: X, movement_count: Y}}
+                            'negative': {}   # {country: {score: X, movement_count: Y}}
+                        }
                     }
                 
                 # Track individual partner movements for country breakdown
@@ -3305,9 +3400,31 @@ def get_global_tier_progression_countries():
                     if movement_score > 0:
                         monthly_progression[month_str]['positive_movements'] += 1
                         monthly_progression[month_str]['positive_score'] += movement_score
+                        
+                        # Track country breakdown for positive movements (global only)
+                        if is_global and monthly_progression[month_str]['country_breakdowns']:
+                            country = current_month['country']
+                            if pd.notna(country):
+                                if country not in monthly_progression[month_str]['country_breakdowns']['positive']:
+                                    monthly_progression[month_str]['country_breakdowns']['positive'][country] = {
+                                        'score': 0, 'movement_count': 0
+                                    }
+                                monthly_progression[month_str]['country_breakdowns']['positive'][country]['score'] += movement_score
+                                monthly_progression[month_str]['country_breakdowns']['positive'][country]['movement_count'] += 1
                     else:
                         monthly_progression[month_str]['negative_movements'] += 1
                         monthly_progression[month_str]['negative_score'] += movement_score
+                        
+                        # Track country breakdown for negative movements (global only)
+                        if is_global and monthly_progression[month_str]['country_breakdowns']:
+                            country = current_month['country']
+                            if pd.notna(country):
+                                if country not in monthly_progression[month_str]['country_breakdowns']['negative']:
+                                    monthly_progression[month_str]['country_breakdowns']['negative'][country] = {
+                                        'score': 0, 'movement_count': 0
+                                    }
+                                monthly_progression[month_str]['country_breakdowns']['negative'][country]['score'] += movement_score
+                                monthly_progression[month_str]['country_breakdowns']['negative'][country]['movement_count'] += 1
         
         # Now group movements by country
         country_scores = {}

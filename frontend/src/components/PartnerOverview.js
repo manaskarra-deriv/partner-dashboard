@@ -14,15 +14,23 @@ const PartnerOverview = ({
   performanceAnalyticsLoading,
   tierAnalyticsLoading,
   // Navigation function
-  navigateToPartnerDetail
+  navigateToPartnerDetail,
+  // Preloaded global partner enablement data
+  globalTierProgressionData: preloadedGlobalTierProgressionData,
+  globalProgressionLoading: preloadedGlobalProgressionLoading
 }) => {
   const [activeChart, setActiveChart] = useState('company_revenue');
   const [showTrends, setShowTrends] = useState(false);
   
-  // Global Partner Enablement state
-  const [globalTierProgressionData, setGlobalTierProgressionData] = useState(null);
-  const [globalProgressionLoading, setGlobalProgressionLoading] = useState(false);
+  // Use preloaded global partner enablement data instead of local state
+  const globalTierProgressionData = preloadedGlobalTierProgressionData;
+  const globalProgressionLoading = preloadedGlobalProgressionLoading;
   const [globalProgressionError, setGlobalProgressionError] = useState(null);
+  
+  // State for filtered global data (when tier filters are applied)
+  const [filteredGlobalData, setFilteredGlobalData] = useState(null);
+  const [tierFilterLoading, setTierFilterLoading] = useState(false);
+  
   const [showCountryModal, setShowCountryModal] = useState(false);
   const [selectedCountryData, setSelectedCountryData] = useState(null);
   const [countryModalLoading, setCountryModalLoading] = useState(false);
@@ -31,17 +39,121 @@ const PartnerOverview = ({
   const [selectedToTier, setSelectedToTier] = useState('All Tiers');
   const [appliedFromTier, setAppliedFromTier] = useState('All Tiers');
   const [appliedToTier, setAppliedToTier] = useState('All Tiers');
+  const [isApplyingFilter, setIsApplyingFilter] = useState(false);
 
   if (!overview) return null;
 
-  // Fetch global tier progression data
+  // Helper to get current global data (preloaded or filtered)
+  const getCurrentGlobalData = () => {
+    return filteredGlobalData || globalTierProgressionData;
+  };
+
+  // Helper to check if global data is loading
+  const isGlobalDataLoading = () => {
+    return globalProgressionLoading || tierFilterLoading;
+  };
+
+  // Fetch global tier progression data (now handles filtering of preloaded data)
   const fetchGlobalTierProgressionData = async (fromTier = 'All Tiers', toTier = 'All Tiers') => {
-    setGlobalProgressionLoading(true);
+    // If no filters applied, use the preloaded data
+    if (fromTier === 'All Tiers' && toTier === 'All Tiers') {
+      setFilteredGlobalData(null); // Use the main preloaded data
+      setGlobalProgressionError(null);
+      setIsApplyingFilter(false); // Reset applying state immediately
+      return;
+    }
+    
+    // Try client-side filtering first for better performance
+    if (globalTierProgressionData && globalTierProgressionData.monthly_progression) {
+      console.log('🚀 Implementing client-side filtering for tier transitions:', { fromTier, toTier });
+      
+      try {
+        // Client-side filtering using tier transition data
+        const filteredMonthlyData = globalTierProgressionData.monthly_progression.map(monthData => {
+          if (!monthData.tier_transitions) {
+            return monthData; // No filtering possible without transition data
+          }
+          
+          // Filter tier transitions based on from/to tier criteria
+          let filteredTransitions = Object.values(monthData.tier_transitions);
+          
+          if (fromTier !== 'All Tiers') {
+            filteredTransitions = filteredTransitions.filter(t => t.from_tier === fromTier);
+          }
+          
+          if (toTier !== 'All Tiers') {
+            filteredTransitions = filteredTransitions.filter(t => t.to_tier === toTier);
+          }
+          
+          // Recalculate scores and movements from filtered transitions
+          let newPositiveScore = 0;
+          let newNegativeScore = 0;
+          let newPositiveMovements = 0;
+          let newNegativeMovements = 0;
+          let newTotalMovements = 0;
+          
+          filteredTransitions.forEach(transition => {
+            if (transition.total_score > 0) {
+              newPositiveScore += transition.total_score;
+              newPositiveMovements += transition.count;
+            } else if (transition.total_score < 0) {
+              newNegativeScore += transition.total_score;
+              newNegativeMovements += transition.count;
+            }
+            newTotalMovements += transition.count;
+          });
+          
+          return {
+            ...monthData,
+            positive_score: newPositiveScore,
+            negative_score: newNegativeScore,
+            positive_movements: newPositiveMovements,
+            negative_movements: newNegativeMovements,
+            total_partners_with_movement: newTotalMovements,
+            weighted_net_movement: newPositiveScore + newNegativeScore
+          };
+        });
+        
+        // Calculate new summary from filtered data
+        const newSummary = {
+          total_positive_score: filteredMonthlyData.reduce((sum, month) => sum + month.positive_score, 0),
+          total_negative_score: filteredMonthlyData.reduce((sum, month) => sum + month.negative_score, 0),
+          total_months: filteredMonthlyData.length,
+          weighted_net_movement: 0
+        };
+        newSummary.weighted_net_movement = newSummary.total_positive_score + newSummary.total_negative_score;
+        newSummary.avg_monthly_net_movement = newSummary.weighted_net_movement / newSummary.total_months;
+        
+        // Create filtered data object
+        const clientFilteredData = {
+          monthly_progression: filteredMonthlyData,
+          summary: newSummary
+        };
+        
+        console.log('✅ Client-side filtering complete:', { 
+          originalTotal: globalTierProgressionData.summary.weighted_net_movement,
+          filteredTotal: newSummary.weighted_net_movement 
+        });
+        
+        setFilteredGlobalData(clientFilteredData);
+        setIsApplyingFilter(false);
+        setGlobalProgressionError(null);
+        return; // Success! No need for API call
+        
+      } catch (err) {
+        console.error('❌ Client-side filtering failed:', err);
+        setIsApplyingFilter(false);
+        // Fall through to API call
+      }
+    }
+    
+    // Apply tier filters by fetching filtered data from API
+    setTierFilterLoading(true);
     setGlobalProgressionError(null);
     
     try {
       const params = new URLSearchParams();
-      params.append('is_global', 'true'); // Add global flag for global data
+      params.append('is_global', 'true');
       if (fromTier !== 'All Tiers') {
         params.append('from_tier', fromTier);
       }
@@ -51,19 +163,20 @@ const PartnerOverview = ({
       
       const url = `${API_BASE_URL}/api/partner-tier-progression?${params.toString()}`;
       const response = await axios.get(url);
-      console.log('🔍 Global tier progression API response:', response.data);
+      console.log('🔍 Filtered global tier progression API response:', response.data);
       
       if (response.data.success) {
-        setGlobalTierProgressionData(response.data.data);
+        setFilteredGlobalData(response.data.data);
       } else {
-        setGlobalProgressionError('Failed to fetch global tier progression data');
+        setGlobalProgressionError('Failed to fetch filtered global tier progression data');
       }
     } catch (err) {
-      console.error('❌ Error fetching global tier progression data:', err);
-      setGlobalProgressionError('Error loading global tier progression data');
-      setGlobalTierProgressionData(null);
+      console.error('❌ Error fetching filtered global tier progression data:', err);
+      setGlobalProgressionError('Error loading filtered global tier progression data');
+      setFilteredGlobalData(null);
     } finally {
-      setGlobalProgressionLoading(false);
+      setTierFilterLoading(false);
+      setIsApplyingFilter(false); // Reset applying state when filtering completes
     }
   };
 
@@ -110,13 +223,35 @@ const PartnerOverview = ({
   // Handle movement score click for global data
   const handleGlobalMovementClick = async (month, score, movementType) => {
     if (score !== 0) {
-      const loadingKey = `${month}-${movementType}`;
-      setLoadingScore(loadingKey);
+      const currentData = getCurrentGlobalData();
       
-      try {
-        await fetchCountryBreakdown(month, movementType);
-      } finally {
-        setLoadingScore(null);
+      // Check if we have pre-calculated country breakdowns
+      const monthData = currentData?.monthly_progression?.find(m => m.month === month);
+      
+      if (monthData?.country_breakdowns) {
+        // Use pre-calculated data - instant display!
+        const countries = monthData.country_breakdowns[movementType] || [];
+        
+        console.log('✅ Using pre-calculated country data for:', { month, movementType, countries: countries.length });
+        
+        setSelectedCountryData({
+          month,
+          movementType,
+          countries,
+          total_countries: countries.length
+        });
+        setShowCountryModal(true);
+      } else {
+        // Fallback to API call (for filtered data or if pre-calculation failed)
+        console.log('🔄 Falling back to API call for country breakdown');
+        const loadingKey = `${month}-${movementType}`;
+        setLoadingScore(loadingKey);
+        
+        try {
+          await fetchCountryBreakdown(month, movementType);
+        } finally {
+          setLoadingScore(null);
+        }
       }
     }
   };
@@ -129,6 +264,7 @@ const PartnerOverview = ({
 
   // Apply tier filter
   const applyTierFilter = () => {
+    setIsApplyingFilter(true);
     setAppliedFromTier(selectedFromTier);
     setAppliedToTier(selectedToTier);
   };
@@ -661,9 +797,9 @@ const PartnerOverview = ({
                 <button 
                   className="apply-filter-btn"
                   onClick={applyTierFilter}
-                  disabled={globalProgressionLoading}
+                  disabled={isGlobalDataLoading() || isApplyingFilter}
                 >
-                  {globalProgressionLoading ? (
+                  {isApplyingFilter || tierFilterLoading ? (
                     <>
                       <div className="loading-spinner"></div>
                       <span>Applying...</span>
@@ -687,8 +823,8 @@ const PartnerOverview = ({
           ) : (
             <>
               {/* Summary Cards */}
-              <div className={`tier-summary-cards enablement-summary-cards ${globalProgressionLoading ? 'loading' : ''}`}>
-                {globalProgressionLoading && !globalTierProgressionData ? (
+              <div className={`tier-summary-cards enablement-summary-cards ${isGlobalDataLoading() ? 'loading' : ''}`}>
+                {isGlobalDataLoading() && !getCurrentGlobalData() ? (
                   // Initial loading skeleton
                   Array.from({ length: 5 }).map((_, index) => (
                     <div key={index} className="summary-card loading-skeleton">
@@ -696,37 +832,37 @@ const PartnerOverview = ({
                       <div className="summary-label skeleton-text"></div>
                     </div>
                   ))
-                ) : globalTierProgressionData && globalTierProgressionData.summary ? (
+                ) : getCurrentGlobalData() && getCurrentGlobalData().summary ? (
                   <>
                     <div className="summary-card">
-                      <div className={`summary-value ${getMovementClass(globalTierProgressionData.summary.total_positive_score)}`}>
-                        {formatMovementScore(globalTierProgressionData.summary.total_positive_score)}
+                      <div className={`summary-value ${getMovementClass(getCurrentGlobalData().summary.total_positive_score)}`}>
+                        {formatMovementScore(getCurrentGlobalData().summary.total_positive_score)}
                       </div>
                       <div className="summary-label">Total Positive Tier Progression Score</div>
                     </div>
                     
                     <div className="summary-card">
-                      <div className={`summary-value ${getMovementClass(globalTierProgressionData.summary.total_negative_score)}`}>
-                        {formatMovementScore(globalTierProgressionData.summary.total_negative_score)}
+                      <div className={`summary-value ${getMovementClass(getCurrentGlobalData().summary.total_negative_score)}`}>
+                        {formatMovementScore(getCurrentGlobalData().summary.total_negative_score)}
                       </div>
                       <div className="summary-label">Total Negative Tier Progression Score</div>
                     </div>
                     
                     <div className="summary-card weighted-net-movement-card">
-                      <div className={`summary-value ${getMovementClass(globalTierProgressionData.summary.weighted_net_movement)}`}>
-                        {formatMovementScore(globalTierProgressionData.summary.weighted_net_movement)}
+                      <div className={`summary-value ${getMovementClass(getCurrentGlobalData().summary.weighted_net_movement)}`}>
+                        {formatMovementScore(getCurrentGlobalData().summary.weighted_net_movement)}
                       </div>
                       <div className="summary-label">Weighted Net Movement Across All Tiers</div>
                     </div>
                     
                     <div className="summary-card">
-                      <div className="summary-value">{globalTierProgressionData.summary.total_months}</div>
+                      <div className="summary-value">{getCurrentGlobalData().summary.total_months}</div>
                       <div className="summary-label">Total Months Analyzed</div>
                     </div>
                     
                     <div className="summary-card">
-                      <div className={`summary-value ${getMovementClass(globalTierProgressionData.summary.avg_monthly_net_movement)}`}>
-                        {formatMovementScore(globalTierProgressionData.summary.avg_monthly_net_movement.toFixed(1))}
+                      <div className={`summary-value ${getMovementClass(getCurrentGlobalData().summary.avg_monthly_net_movement)}`}>
+                        {formatMovementScore(getCurrentGlobalData().summary.avg_monthly_net_movement.toFixed(1))}
                       </div>
                       <div className="summary-label">Average Monthly Net Movement</div>
                     </div>
@@ -735,7 +871,7 @@ const PartnerOverview = ({
               </div>
 
               {/* Monthly Progression Table */}
-              {globalTierProgressionData && globalTierProgressionData.monthly_progression && globalTierProgressionData.monthly_progression.length > 0 ? (
+              {getCurrentGlobalData() && getCurrentGlobalData().monthly_progression && getCurrentGlobalData().monthly_progression.length > 0 ? (
                 <div className="tier-progression-table-container">
                   <table className="tier-progression-table">
                     <thead>
@@ -748,7 +884,7 @@ const PartnerOverview = ({
                       </tr>
                     </thead>
                     <tbody>
-                      {globalTierProgressionData.monthly_progression.map((month, index) => (
+                      {getCurrentGlobalData().monthly_progression.map((month, index) => (
                         <tr key={`${month.month}-${index}`}>
                           <td style={{textAlign: 'left'}}>
                             <strong>{month.month}</strong>
@@ -810,7 +946,7 @@ const PartnerOverview = ({
                     </tbody>
                   </table>
                 </div>
-              ) : globalTierProgressionData && !globalProgressionLoading ? (
+              ) : getCurrentGlobalData() && !globalProgressionLoading ? (
                 <div className="empty-state">
                   <p>No monthly tier progression data available.</p>
                 </div>

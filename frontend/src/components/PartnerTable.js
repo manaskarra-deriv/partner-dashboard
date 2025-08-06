@@ -21,7 +21,10 @@ const PartnerTable = ({
   totalCount,
   partnersPerPage,
   onPageChange,
-  mainLoading = false
+  mainLoading = false,
+  // New props for CSV export
+  allFilteredPartners = [], // All partners matching current filters (not just current page)
+  onExportCSV // Function to get all filtered data for export
 }) => {
   const getSortIcon = (field) => {
     if (sortField !== field) {
@@ -30,6 +33,106 @@ const PartnerTable = ({
     return sortDirection === 'asc' ? 
       <span className="sort-icon sort-asc">▲</span> : 
       <span className="sort-icon sort-desc">▼</span>;
+  };
+
+  // CSV Export functionality
+  const exportToCSV = async () => {
+    try {
+      let dataToExport = allFilteredPartners;
+      
+      // If no export function provided, use current page data as fallback
+      if (onExportCSV && typeof onExportCSV === 'function') {
+        console.log('🔄 Fetching all filtered data for CSV export...');
+        dataToExport = await onExportCSV();
+      } else if (allFilteredPartners.length === 0) {
+        dataToExport = partners; // Use current page as fallback
+      }
+
+      if (!dataToExport || dataToExport.length === 0) {
+        alert('No data available to export');
+        return;
+      }
+
+      // Prepare CSV headers
+      const headers = [
+        'Partner ID',
+        'First Name', 
+        'Last Name',
+        'Username',
+        'Country',
+        'GP Region',
+        'Tier',
+        'Total Earnings',
+        'Company Revenue',
+        'Avg Past 3 Months Earnings',
+        'EtR Ratio (%)',
+        'Active Clients',
+        'New Clients',
+        'Volume (USD)',
+        'API Developer'
+      ];
+
+      // Prepare CSV rows
+      const csvRows = dataToExport.map(partner => [
+        partner.partner_id || '',
+        partner.first_name || '',
+        partner.last_name || '',
+        partner.username || '',
+        partner.country || '',
+        partner.region || '',
+        partner.partner_tier || '',
+        partner.total_earnings || 0,
+        partner.company_revenue || 0,
+        partner.avg_past_3_months_earnings || 0,
+        calculateRatioPercentage(partner.total_earnings || 0, partner.company_revenue || 0),
+        partner.active_clients || 0,
+        partner.new_active_clients || 0,
+        partner.volume_usd || 0,
+        partner.is_app_dev ? 'Yes' : 'No'
+      ]);
+
+      // Create CSV content
+      const csvContent = [
+        headers.join(','),
+        ...csvRows.map(row => 
+          row.map(field => {
+            // Handle fields that might contain commas or quotes
+            const stringField = String(field);
+            if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
+              return `"${stringField.replace(/"/g, '""')}"`;
+            }
+            return stringField;
+          }).join(',')
+        )
+      ].join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      
+      if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        
+        // Generate filename with current timestamp and filter info
+        const timestamp = new Date().toISOString().split('T')[0];
+        const activeFilterCount = Object.values(activeFilters || {}).filter(f => 
+          f && f !== 'All Countries' && f !== 'All GP Regions' && f !== 'All Tiers'
+        ).length;
+        const filterSuffix = activeFilterCount > 0 ? `_filtered_${activeFilterCount}` : '';
+        
+        link.setAttribute('download', `partners_export_${timestamp}${filterSuffix}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        console.log(`✅ CSV exported: ${dataToExport.length} partners`);
+      }
+    } catch (error) {
+      console.error('❌ Error exporting CSV:', error);
+      alert('Error exporting CSV. Please try again.');
+    }
   };
 
   const maskPII = (text, type = 'default') => {
@@ -139,6 +242,18 @@ const PartnerTable = ({
         <h3 className="heading-md">Partners ({formatNumber(totalCount || partners.length)})</h3>
         
         <div className="table-header-actions">
+        {/* Export CSV Button - Only visible when PII is enabled */}
+        {showPII && (
+          <button 
+            className="btn-sm btn-primary export-csv-btn"
+            onClick={exportToCSV}
+            title="Export all filtered partners to CSV"
+            disabled={loading}
+          >
+            📊 Export CSV
+          </button>
+        )}
+        
         {/* Pagination Controls in Header */}
         {totalCount > 0 && (
           <Pagination

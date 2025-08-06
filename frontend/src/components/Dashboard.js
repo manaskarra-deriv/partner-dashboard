@@ -43,6 +43,11 @@ const Dashboard = ({
   tierAnalyticsData,
   // Partner navigation function
   navigateToPartnerDetail,
+  // Global Partner Enablement preloaded data
+  globalTierProgressionData,
+  globalProgressionLoading,
+  // CSV Export function
+  onExportCSV,
   // Persistent country analysis state
   tierAnalyticsDataCountry,
   setTierAnalyticsDataCountry,
@@ -105,6 +110,9 @@ const Dashboard = ({
                 performanceAnalyticsLoading={performanceAnalyticsLoading}
                 tierAnalyticsLoading={tierAnalyticsLoading}
                 navigateToPartnerDetail={navigateToPartnerDetail}
+                // Preloaded global partner enablement data
+                globalTierProgressionData={globalTierProgressionData}
+                globalProgressionLoading={globalProgressionLoading}
               />
             </section>
           )}
@@ -178,6 +186,7 @@ const Dashboard = ({
                 partnersPerPage={partnersPerPage}
                 onPageChange={onPageChange}
                 mainLoading={loading}
+                onExportCSV={onExportCSV}
               />
             </div>
           </section>

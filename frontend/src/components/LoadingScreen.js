@@ -61,17 +61,32 @@ const LoadingScreen = ({ fullscreen = false, progress = 0 }) => {
           right: border + 24,
           bottom: border + 24,
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 2,
-          boxShadow: '0 8px 32px 0 rgba(0,0,0,0.04)'
+          boxShadow: '0 8px 32px 0 rgba(0,0,0,0.04)',
+          gap: '16px'
         }}>
           <img 
             src="/Deriv.png" 
             alt="Deriv" 
             className="loading-logo"
-            style={{ width: '180px', height: 'auto', objectFit: 'contain' }}
+            style={{ width: '140px', height: 'auto', objectFit: 'contain' }}
           />
+          {progress > 0 && (
+            <div style={{ textAlign: 'center', color: '#6b7280', fontSize: '12px' }}>
+              <div style={{ marginBottom: '4px', fontWeight: '500' }}>
+                Loading Partner Dashboard
+              </div>
+              <div style={{ fontSize: '11px' }}>
+                {progress >= 80 ? 'Preloading Global Data & Country Breakdowns...' : 
+                 progress >= 60 ? 'Loading Analytics Data...' :
+                 progress >= 40 ? 'Fetching Partner Data...' :
+                 'Initializing Dashboard...'}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
