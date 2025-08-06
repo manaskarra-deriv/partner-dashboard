@@ -225,11 +225,14 @@ const PartnerOverview = ({
     if (score !== 0) {
       const currentData = getCurrentGlobalData();
       
-      // Check if we have pre-calculated country breakdowns
+      // Check if tier filters are applied
+      const hasTierFilters = appliedFromTier !== 'All Tiers' || appliedToTier !== 'All Tiers';
+      
+      // Check if we have pre-calculated country breakdowns AND no tier filters
       const monthData = currentData?.monthly_progression?.find(m => m.month === month);
       
-      if (monthData?.country_breakdowns) {
-        // Use pre-calculated data - instant display! (includes filtered data)
+      if (monthData?.country_breakdowns && !hasTierFilters) {
+        // Use pre-calculated data - instant display! (only when no tier filters)
         const countries = monthData.country_breakdowns[movementType] || [];
         
         console.log('✅ Using pre-calculated country data for:', { month, movementType, countries: countries.length });
@@ -242,8 +245,9 @@ const PartnerOverview = ({
         });
         setShowCountryModal(true);
       } else {
-        // API call required (if pre-calculation failed)
-        console.log('🔄 Making API call for country breakdown (pre-calculation failed)');
+        // API call required (for filtered data or if pre-calculation failed)
+        const reason = hasTierFilters ? 'tier filters applied' : 'pre-calculation failed';
+        console.log(`🔄 Making API call for country breakdown (${reason})`);
         const loadingKey = `${month}-${movementType}`;
         setLoadingScore(loadingKey);
         

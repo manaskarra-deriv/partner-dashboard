@@ -2347,9 +2347,6 @@ def get_partner_tier_progression():
         # Track monthly progression
         monthly_progression = {}
         
-        # Debug: Log tier filters being applied
-        print(f"🔍 TIER FILTERS: from_tier={from_tier}, to_tier={to_tier}")
-        
         # Group by partner to track their tier changes over time
         for partner_id, partner_data_group in filtered_data.groupby('partner_id'):
             partner_months = partner_data_group.sort_values('month')
@@ -2386,7 +2383,7 @@ def get_partner_tier_progression():
                         'negative_score': 0,
                         'total_partners_with_movement': 0,
                         'partner_movements': [],
-                        # Add country breakdown tracking for global requests (including filtered)
+                        # Add country breakdown tracking for global requests
                         'country_breakdowns': {
                             'positive': {},  # {country: {score: X, movement_count: Y}}
                             'negative': {}   # {country: {score: X, movement_count: Y}}
@@ -2475,7 +2472,7 @@ def get_partner_tier_progression():
             }
             
             # Add pre-calculated country breakdowns for global requests
-            if is_global and month_data.get('country_breakdowns') is not None:
+            if is_global and month_data['country_breakdowns']:
                 # Calculate true net movement for each country (positive + negative scores)
                 true_country_net = {}
                 
