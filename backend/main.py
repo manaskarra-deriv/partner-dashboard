@@ -2924,8 +2924,20 @@ def get_global_tier_progression_countries():
             for movement in monthly_progression[month_str]['partner_movements']:
                 country = movement['country']
                 movement_score = movement['movement_score']
+                from_tier_movement = movement['from_tier']
+                to_tier_movement = movement['to_tier']
                 
                 if pd.isna(country):
+                    continue
+                
+                # Apply tier filters for total movement counting
+                tier_filter_match = True
+                if from_tier and from_tier != 'All Tiers' and from_tier_movement != from_tier:
+                    tier_filter_match = False
+                if to_tier and to_tier != 'All Tiers' and to_tier_movement != to_tier:
+                    tier_filter_match = False
+                
+                if not tier_filter_match:
                     continue
                 
                 # Initialize country if not exists
@@ -2937,7 +2949,7 @@ def get_global_tier_progression_countries():
                 if country not in country_total_movements:
                     country_total_movements[country] = 0
                 
-                # Count ALL movements for this country (for Partners with Movement)
+                # Count movements that pass tier filters (for Partners with Movement)
                 country_total_movements[country] += 1
                 
                 # Only include movements of the requested type for scoring/ranking
@@ -2957,14 +2969,26 @@ def get_global_tier_progression_countries():
         else:
             sorted_countries = sorted(country_scores.items(), key=lambda x: x[1]['score'])
         
-        # Calculate true net movement for each country (considering ALL movements, not just filtered ones)
+        # Calculate true net movement for each country (considering movements that pass tier filters)
         true_net_movements = {}
         if month_str in monthly_progression:
             for movement in monthly_progression[month_str]['partner_movements']:
                 country = movement['country']
                 movement_score = movement['movement_score']
+                from_tier_movement = movement['from_tier']
+                to_tier_movement = movement['to_tier']
                 
                 if pd.isna(country):
+                    continue
+                
+                # Apply tier filters for net movement calculation
+                tier_filter_match = True
+                if from_tier and from_tier != 'All Tiers' and from_tier_movement != from_tier:
+                    tier_filter_match = False
+                if to_tier and to_tier != 'All Tiers' and to_tier_movement != to_tier:
+                    tier_filter_match = False
+                
+                if not tier_filter_match:
                     continue
                 
                 if country not in true_net_movements:
