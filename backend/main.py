@@ -2347,6 +2347,9 @@ def get_partner_tier_progression():
         # Track monthly progression
         monthly_progression = {}
         
+        # Debug: Log tier filters being applied
+        print(f"🔍 TIER FILTERS: from_tier={from_tier}, to_tier={to_tier}")
+        
         # Group by partner to track their tier changes over time
         for partner_id, partner_data_group in filtered_data.groupby('partner_id'):
             partner_months = partner_data_group.sort_values('month')
