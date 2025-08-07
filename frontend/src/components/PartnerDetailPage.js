@@ -47,7 +47,7 @@ const PartnerDetailPage = ({ formatCurrency, formatNumber, formatVolume, getTier
   };
 
   if (loading) {
-    return <LoadingScreen fullscreen />;
+    return <LoadingScreen fullscreen hideText />;
   }
 
   if (error) {
