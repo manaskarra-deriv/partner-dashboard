@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import PartnerOverview from './PartnerOverview';
-import PerformanceAnalytics from './PerformanceAnalytics';
-import TierAnalytics from './TierAnalytics';
-import ApplicationFunnel from './ApplicationFunnel';
-import PartnerTable from './PartnerTable';
-import PartnerFilters from './PartnerFilters';
+import PartnerOverview from '../overview/PartnerOverview';
+import PerformanceAnalytics from '../overview/PerformanceAnalytics';
+import TierAnalytics from '../overview/TierAnalytics';
+import CountryAnalysis from '../country-analysis/CountryAnalysis';
+import PartnerTable from '../management/PartnerTable';
+import PartnerFilters from '../management/PartnerFilters';
 
 const Dashboard = ({ 
   overview, 
@@ -119,7 +119,7 @@ const Dashboard = ({
         {/* Country Analysis Tab */}
         <div className={`tab-content ${activeTab === 'funnel' ? 'active' : ''}`}>
           <section className="application-funnel-section">
-            <ApplicationFunnel 
+            <CountryAnalysis 
               formatNumber={formatNumber}
               getTierColor={getTierColor}
               mainLoading={loading}

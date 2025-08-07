@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL } from '../../config';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import PartnerEnablement from './PartnerEnablement';
 
-const ApplicationFunnel = ({ 
+const CountryAnalysis = ({ 
   formatNumber, 
   getTierColor, 
   mainLoading = false, 
@@ -1566,4 +1566,4 @@ const ApplicationFunnel = ({
   );
 };
 
-export default ApplicationFunnel; 
+export default CountryAnalysis; 

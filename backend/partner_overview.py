@@ -17,7 +17,6 @@ from datetime import datetime
 import numpy as np
 from collections import OrderedDict
 from db_integration import db
-# Region mapping removed - Partner Overview only uses country filtering
 from utils import TIER_MOVEMENT_SCORES, get_tier_movement_score, validate_partner_data
 
 logger = logging.getLogger(__name__)

@@ -5,10 +5,10 @@ import { API_BASE_URL } from './config';
 import './App.css';
 
 // Components
-import Dashboard from './components/Dashboard';
-import PartnerDetailPage from './components/PartnerDetailPage';
-import LoadingScreen from './components/LoadingScreen';
-import ApplicationFunnel from './components/ApplicationFunnel';
+import Dashboard from './components/shared/Dashboard';
+import PartnerDetailPage from './components/shared/PartnerDetailPage';
+import LoadingScreen from './components/shared/LoadingScreen';
+import CountryAnalysis from './components/country-analysis/CountryAnalysis';
 
 function App() {
   const navigate = useNavigate();
