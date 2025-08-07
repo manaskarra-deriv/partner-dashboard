@@ -63,6 +63,11 @@ function App() {
     navigate(`/partner/${partnerId}`);
   };
 
+  // Backend readiness state
+  const [backendReady, setBackendReady] = useState(false);
+  const [backendCheckInProgress, setBackendCheckInProgress] = useState(true);
+  const [backendStatus, setBackendStatus] = useState('Initializing backend...');
+
   // Loading states for different modules
   const [overviewLoading, setOverviewLoading] = useState(true);
   const [funnelLoading, setFunnelLoading] = useState(true);
@@ -127,8 +132,45 @@ function App() {
     }
   };
 
-  // Fetch all three modules in parallel on mount
-  useEffect(() => {
+  // Check if backend is ready before starting data fetching
+  const checkBackendReadiness = async () => {
+    let attempts = 0;
+    const maxAttempts = 30; // 30 attempts * 2 seconds = 60 seconds max wait
+    
+    while (attempts < maxAttempts) {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/api/ready`);
+        if (response.data.ready) {
+          setBackendReady(true);
+          setBackendStatus('Backend ready!');
+          setBackendCheckInProgress(false);
+          return true;
+        } else {
+          setBackendStatus(response.data.status || 'Backend loading data...');
+        }
+      } catch (error) {
+        if (error.response?.status === 503) {
+          // Service Unavailable - backend is loading
+          setBackendStatus(error.response.data?.status || 'Backend loading data...');
+        } else {
+          // Other errors
+          setBackendStatus('Connecting to backend...');
+        }
+      }
+      
+      attempts++;
+      // Wait 2 seconds before next check
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    
+    // If we get here, backend didn't become ready in time
+    setBackendStatus('Backend taking longer than expected...');
+    setBackendCheckInProgress(false);
+    return false;
+  };
+
+  // Start data fetching after backend is ready
+  const startDataFetching = () => {
     fetchOverview();
     fetchPartners(activeFilters, 1);
     fetchFilters();
@@ -143,6 +185,15 @@ function App() {
       fetchInitialFunnelData(),
       fetchAvailableCountriesAndRegions()
     ]).then(() => setFunnelInitialLoading(false));
+  };
+
+  // Check backend readiness first, then start data fetching
+  useEffect(() => {
+    checkBackendReadiness().then(isReady => {
+      if (isReady) {
+        startDataFetching();
+      }
+    });
   }, []);
 
   // Handle scroll restoration when returning from partner detail
@@ -315,31 +366,54 @@ function App() {
   };
 
   // Progress calculation for splash
-  const modulesLoaded = [
-    !overviewLoading, 
-    !funnelLoading, 
-    !partnerMgmtLoading, 
-    !funnelInitialLoading, 
-    !performanceAnalyticsLoading, 
-    !tierAnalyticsLoading,
-    !globalProgressionLoading
-  ].filter(Boolean).length;
+  let progress = 0;
+  let status = backendStatus;
   
-  // Calculate progress with global enablement weighting (it's the slowest)
-  let progress = Math.round((modulesLoaded / 7) * 80); // Base progress up to 80%
-  
-  // Add extra progress for global enablement data
-  if (globalProgressionLoading && preloadingProgress > 0) {
-    progress += Math.round((preloadingProgress / 100) * 20); // Final 20% for global data
-  } else if (!globalProgressionLoading) {
-    progress = 100;
+  if (!backendReady || backendCheckInProgress) {
+    // Backend is still loading - show backend status
+    progress = backendCheckInProgress ? 15 : 0; // Small progress for backend check
+    status = backendStatus;
+  } else {
+    // Backend is ready, calculate module loading progress
+    const modulesLoaded = [
+      !overviewLoading, 
+      !funnelLoading, 
+      !partnerMgmtLoading, 
+      !funnelInitialLoading, 
+      !performanceAnalyticsLoading, 
+      !tierAnalyticsLoading,
+      !globalProgressionLoading
+    ].filter(Boolean).length;
+    
+    // Start from 20% (backend ready) and go to 100%
+    progress = 20 + Math.round((modulesLoaded / 7) * 60); // 60% for modules (20% to 80%)
+    
+    // Add extra progress for global enablement data
+    if (globalProgressionLoading && preloadingProgress > 0) {
+      progress += Math.round((preloadingProgress / 100) * 20); // Final 20% for global data
+    } else if (!globalProgressionLoading) {
+      progress = 100;
+    }
+    
+    // Update status based on progress
+    if (progress >= 80) {
+      status = 'Preloading Global Data & Country Breakdowns...';
+    } else if (progress >= 60) {
+      status = 'Loading Analytics Data...';
+    } else if (progress >= 40) {
+      status = 'Fetching Partner Data...';
+    } else {
+      status = 'Loading Dashboard Components...';
+    }
   }
   
-  const allLoaded = modulesLoaded === 7;
+  const allLoaded = backendReady && !backendCheckInProgress && !overviewLoading && !funnelLoading && 
+                   !partnerMgmtLoading && !funnelInitialLoading && !performanceAnalyticsLoading && 
+                   !tierAnalyticsLoading && !globalProgressionLoading;
 
   // Show splash screen with progress bar until all loaded
   if (!allLoaded) {
-    return <LoadingScreen fullscreen progress={progress} />;
+    return <LoadingScreen fullscreen progress={progress} status={status} />;
   }
 
   const handleFilterChange = (newFilters) => {

@@ -112,4 +112,7 @@ Thumbs.db
 
 # IPython
 profile_default/
-ipython_config.py 
+ipython_config.py
+
+# Claude/AI Assistant files
+.claude/ 

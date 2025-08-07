@@ -1,6 +1,6 @@
 import React from 'react';
 
-const LoadingScreen = ({ fullscreen = false, progress = 0 }) => {
+const LoadingScreen = ({ fullscreen = false, progress = 0, status = '' }) => {
   // SVG border progress (rectangle)
   const size = 320;
   const border = 10;
@@ -74,16 +74,19 @@ const LoadingScreen = ({ fullscreen = false, progress = 0 }) => {
             className="loading-logo"
             style={{ width: '140px', height: 'auto', objectFit: 'contain' }}
           />
-          {progress > 0 && (
+          {progress >= 0 && (
             <div style={{ textAlign: 'center', color: '#6b7280', fontSize: '12px' }}>
               <div style={{ marginBottom: '4px', fontWeight: '500' }}>
                 Loading Partner Dashboard
               </div>
               <div style={{ fontSize: '11px' }}>
-                {progress >= 80 ? 'Preloading Global Data & Country Breakdowns...' : 
-                 progress >= 60 ? 'Loading Analytics Data...' :
-                 progress >= 40 ? 'Fetching Partner Data...' :
-                 'Initializing Dashboard...'}
+                {status || (
+                  progress >= 80 ? 'Preloading Global Data & Country Breakdowns...' : 
+                  progress >= 60 ? 'Loading Analytics Data...' :
+                  progress >= 40 ? 'Fetching Partner Data...' :
+                  progress >= 20 ? 'Loading Dashboard Components...' :
+                  'Initializing Backend...'
+                )}
               </div>
             </div>
           )}
